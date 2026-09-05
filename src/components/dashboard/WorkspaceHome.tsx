@@ -1,7 +1,7 @@
 /**
- * SynapseDS - WorkspaceHome Component (Slice 1 Foundation)
+ * CARE - WorkspaceHome Component (Slice 1 Foundation)
  * Primary workspace dashboard displaying user isolation metrics, security integrity,
- * and CRE architectural status.
+ * and CARE architectural status.
  */
 
 import React, { useState } from 'react';
@@ -142,7 +142,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
         </div>
       )}
 
-      {/* CRE Architecture & Security Verification Matrix */}
+      {/* CARE Architecture & Security Verification Matrix */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Card 1: Data Isolation & Auth Integrity */}
         <div className="bg-stone-900 border border-stone-800 rounded-xl p-6">
@@ -221,7 +221,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
           </div>
         </div>
 
-        {/* Card 2: CRE Stack Component Verification */}
+        {/* Card 2: CARE Stack Component Verification */}
         <div className="bg-stone-900 border border-stone-800 rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -233,7 +233,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
                   Infrastructure & Runtime Matrix
                 </h2>
                 <p className="text-xs text-stone-400">
-                  Provisioned GCP services and verified CRE architecture modules.
+                  Provisioned GCP services and verified CARE architecture modules.
                 </p>
               </div>
             </div>
@@ -331,7 +331,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
             </div>
             <h3 className="font-semibold text-stone-300 text-sm">Heuristic Priority</h3>
             <p className="text-xs text-stone-500 mt-1">
-              Exponential decay math: P(t) = (w1*T + w2*A + w3*H)*M, AI-curated and manual topic queues.
+              Exponential decay math: Priority(t) = (w1*T(t) + w2*A(t) + w3*H(t))*M(t), AI-curated topic queues.
             </p>
           </div>
 

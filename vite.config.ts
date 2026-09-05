@@ -5,14 +5,14 @@ import {defineConfig, Plugin} from 'vite';
 
 function apiDevPlugin(): Plugin {
   return {
-    name: 'synapse-api-dev-middleware',
+    name: 'care-api-dev-middleware',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         if (req.url === '/api/health') {
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({
             status: 'healthy',
-            service: 'SynapseDS CRE Engine',
+            service: 'CARE Engine',
             environment: 'development',
             databaseId: 'ai-studio-aicuratedrecalls-32bbfc5d-7c54-46b3-883d-c9ead24e489f',
           }));
@@ -35,7 +35,7 @@ function apiDevPlugin(): Plugin {
             isNewUser: false,
             user: {
               uid: 'verified-session-user',
-              email: 'data.scientist@synapse.ai',
+              email: 'data.scientist@care.ai',
               displayName: 'Data Science Specialist',
               authProvider: 'google.com',
               createdAt: new Date().toISOString(),

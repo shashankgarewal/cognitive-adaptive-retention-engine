@@ -1,5 +1,5 @@
 /**
- * SynapseDS - API Client Service
+ * CARE - API Client Service
  * Injects Firebase ID token as Bearer token into all requests to enforce zero cross-user leakage.
  */
 

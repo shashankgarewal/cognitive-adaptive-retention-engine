@@ -1,5 +1,5 @@
 /**
- * SynapseDS - Firebase Client SDK Setup
+ * CARE - Firebase Client SDK Setup
  * Configured with Firebase Authentication and Cloud Firestore.
  */
 

@@ -1,5 +1,5 @@
 """
-SynapseDS - Firebase Auth Token Verification Dependency
+CARE - Firebase Auth Token Verification Dependency
 Extracts and validates Firebase JWT tokens to enforce user isolation.
 """
 

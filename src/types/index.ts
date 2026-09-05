@@ -1,5 +1,5 @@
 /**
- * SynapseDS - Shared TypeScript Interfaces
+ * CARE - Shared TypeScript Interfaces
  * Matches backend Pydantic models for strict type safety.
  */
 

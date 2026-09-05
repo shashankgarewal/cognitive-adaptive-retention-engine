@@ -1,5 +1,5 @@
 """
-SynapseDS - Application Configuration
+CARE - Application Configuration
 Dynamic secret resolution: Google Cloud Secret Manager in production,
 falling back to local environment variables during development.
 """
@@ -14,7 +14,7 @@ load_dotenv()
 
 
 class Settings:
-    PROJECT_NAME: str = "SynapseDS - Adaptive Retention Engine"
+    PROJECT_NAME: str = "CARE - Cognitive & Adaptive Retention Engine"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", os.getenv("GOOGLE_CLOUD_PROJECT", "gen-lang-client-0116634243"))
     FIRESTORE_DATABASE_ID: str = os.getenv(

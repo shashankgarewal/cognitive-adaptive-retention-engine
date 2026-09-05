@@ -1,5 +1,5 @@
 """
-SynapseDS - Firebase Admin & Firestore Client
+CARE - Firebase Admin & Firestore Client
 Initializes the Firebase Admin SDK and scopes Firestore queries.
 """
 

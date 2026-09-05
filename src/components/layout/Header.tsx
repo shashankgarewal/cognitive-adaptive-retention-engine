@@ -1,5 +1,5 @@
 /**
- * SynapseDS - Header Component
+ * CARE - Header Component
  * Header navigation with user profile chip, auth triggers, and data isolation indicator.
  */
 
@@ -25,14 +25,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-semibold tracking-tight text-stone-100 text-lg">
-                Synapse<span className="text-emerald-400">DS</span>
+                CARE
               </span>
               <span className="px-1.5 py-0.5 text-[10px] uppercase font-mono tracking-wider bg-stone-800 text-stone-400 border border-stone-700 rounded">
-                CRE Stack
+                CARE Stack
               </span>
             </div>
             <p className="text-[11px] text-stone-400 tracking-normal hidden sm:block">
-              Cognitive Retention Engine for Data Science
+              Cognitive & Adaptive Retention Engine
             </p>
           </div>
         </div>

@@ -1,5 +1,5 @@
 """
-SynapseDS - FastAPI Server Entry Point
+CARE - FastAPI Server Entry Point
 Includes CORS middleware, API routers, and static file serving for Cloud Run.
 """
 
@@ -14,7 +14,7 @@ from backend.config import settings
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version="1.0.0",
-    description="Adaptive learning and knowledge retention engine for Data Science professionals",
+    description="Cognitive & Adaptive Retention Engine for Data Science professionals",
 )
 
 # -----------------------------------------------------------------------------
@@ -39,7 +39,7 @@ async def health_check():
     """Liveness probe for Cloud Run."""
     return {
         "status": "healthy",
-        "service": "SynapseDS Engine",
+        "service": "CARE Engine",
         "environment": settings.ENVIRONMENT,
         "databaseId": settings.FIRESTORE_DATABASE_ID,
     }

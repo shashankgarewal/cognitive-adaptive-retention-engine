@@ -1,5 +1,5 @@
 /**
- * SynapseDS - Authentication Context Provider
+ * CARE - Authentication Context Provider
  * Manages Firebase Auth state, Google SSO, Email/Password flows,
  * and profile synchronization with the FastAPI backend.
  */

@@ -1,5 +1,5 @@
 /**
- * SynapseDS - AuthModal Component
+ * CARE - AuthModal Component
  * Accessible, high-contrast modal supporting Google SSO and Email/Password authentication.
  */
 
@@ -88,14 +88,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm">
-              S
+              C
             </div>
             <span className="text-xs font-medium tracking-wide uppercase text-stone-400">
-              SynapseDS Access
+              CARE Access
             </span>
           </div>
           <h2 className="text-xl font-semibold text-stone-100">
-            {mode === 'signin' ? 'Sign in to your Workspace' : 'Create Data Science Workspace'}
+            {mode === 'signin' ? 'Sign in to your Workspace' : 'Create CARE Workspace'}
           </h2>
           <p className="text-sm text-stone-400 mt-1">
             Scoped user isolation under Firebase Auth with end-to-end Firestore persistence.
@@ -226,7 +226,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         <div className="mt-5 text-center text-xs text-stone-400">
           {mode === 'signin' ? (
             <span>
-              New to SynapseDS?{' '}
+              New to CARE?{' '}
               <button
                 id="btn-toggle-to-signup"
                 type="button"

@@ -1,5 +1,5 @@
 """
-SynapseDS - Authentication & User Profile Router
+CARE - Authentication & User Profile Router
 Provides user provisioning and profile synchronization under /users/{userId}.
 """
 

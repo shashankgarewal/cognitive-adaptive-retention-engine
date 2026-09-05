@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for SynapseDS (React + FastAPI on Cloud Run)
+# Multi-stage Dockerfile for CARE (React + FastAPI on Cloud Run)
 
 # Stage 1: Build React Frontend
 FROM node:20-slim AS frontend-builder

@@ -1,5 +1,5 @@
 /**
- * SynapseDS - Primary Application Component
+ * CARE - Primary Application Component
  * Scoped with AuthProvider and Slice 1 Workspace Foundation.
  */
 
@@ -20,9 +20,9 @@ function MainLayout() {
       </main>
       <footer className="border-t border-stone-850 py-6 px-4 sm:px-6 lg:px-8 text-center text-xs text-stone-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>SynapseDS • Cognitive Retention Engine for Data Science Workflows</span>
+          <span>CARE • Cognitive & Adaptive Retention Engine for Data Science Workflows</span>
           <span className="font-mono text-[11px] text-stone-600">
-            CRE Architecture • React 19 + FastAPI + Firestore + Gemini 3.8 Flash
+            CARE Architecture • React 19 + FastAPI + Firestore + Gemini 3.8 Flash
           </span>
         </div>
       </footer>
