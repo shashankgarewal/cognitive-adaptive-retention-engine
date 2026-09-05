@@ -5,7 +5,7 @@ Provides user provisioning and profile synchronization under /users/{userId}.
 
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
-from backend.dependencies.auth import verify_firebase_token
+from backend.dependencies.auth import verify_firebase_token, BANNED_MOCK_UIDS
 from backend.dependencies.firebase_client import get_firestore_client
 from backend.models.schemas import (
     UserProfile,
@@ -27,6 +27,12 @@ async def get_current_user_profile(
     and returns current stats and preferences.
     """
     uid = user_claims.get("uid")
+    if not uid or not isinstance(uid, str) or uid.lower().strip() in BANNED_MOCK_UIDS:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized: Valid authenticated user required. Mock or guest sessions are prohibited.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     email = user_claims.get("email", "")
     display_name = user_claims.get("name")
     photo_url = user_claims.get("picture")

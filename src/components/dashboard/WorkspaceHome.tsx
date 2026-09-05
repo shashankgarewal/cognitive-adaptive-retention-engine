@@ -23,6 +23,7 @@ import {
   Layers,
   Flame,
   ArrowRight,
+  Lock,
 } from 'lucide-react';
 import { JournalEntry, TopicRetentionState, ExtractedConcept } from '../../types';
 import { JournalEntryForm } from '../journal/JournalEntryForm';
@@ -47,6 +48,13 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
   const [testError, setTestError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!user) {
+      setEntries([]);
+      setTopics([]);
+      setIsLoadingData(false);
+      return;
+    }
+
     setIsLoadingData(true);
     try {
       const [entriesRes, topicsRes] = await Promise.all([
@@ -61,11 +69,21 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
     } finally {
       setIsLoadingData(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData, user]);
+
+  // Reset form and concept inspector when logged out
+  useEffect(() => {
+    if (!user) {
+      setShowJournalForm(false);
+      setSelectedConcept(null);
+      setEntries([]);
+      setTopics([]);
+    }
+  }, [user]);
 
   const handleJournalSuccess = async (newEntry: JournalEntry, newConcepts: ExtractedConcept[]) => {
     // Refresh user profile stats and refresh entries/topics lists
@@ -110,179 +128,221 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
             </p>
           </div>
 
-          <div className="shrink-0 flex flex-wrap gap-3">
-            <button
-              id="btn-toggle-log-journal"
-              type="button"
-              onClick={() => setShowJournalForm((prev) => !prev)}
-              className="py-2.5 px-5 bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-semibold rounded-lg text-xs sm:text-sm transition-colors flex items-center justify-center gap-2 shadow-sm"
-            >
-              {showJournalForm ? (
-                <>
-                  <span>Hide Entry Form</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4 text-stone-950" />
-                  <span>Log Work Journal</span>
-                </>
-              )}
-            </button>
+          <div className="shrink-0 flex flex-wrap items-center gap-3">
+            {user ? (
+              <>
+                <button
+                  id="btn-toggle-log-journal"
+                  type="button"
+                  onClick={() => setShowJournalForm((prev) => !prev)}
+                  className="py-2.5 px-5 bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-semibold rounded-lg text-xs sm:text-sm transition-colors flex items-center justify-center gap-2 shadow-sm"
+                >
+                  {showJournalForm ? (
+                    <span>Hide Entry Form</span>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 text-stone-950" />
+                      <span>Log Work Journal</span>
+                    </>
+                  )}
+                </button>
 
-            {!user && (
+                <button
+                  type="button"
+                  onClick={fetchData}
+                  disabled={isLoadingData}
+                  className="p-2.5 bg-stone-800 hover:bg-stone-750 text-stone-300 rounded-lg border border-stone-700 transition-colors"
+                  title="Refresh journal entries and topics"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoadingData ? 'animate-spin' : ''}`} />
+                </button>
+              </>
+            ) : (
               <button
                 id="btn-hero-connect-workspace"
                 onClick={onOpenAuth}
-                className="py-2.5 px-4 bg-stone-800 hover:bg-stone-750 text-stone-200 font-medium rounded-lg text-xs sm:text-sm transition-colors flex items-center justify-center gap-2 border border-stone-700"
+                className="py-2.5 px-5 bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-semibold rounded-lg text-xs sm:text-sm transition-colors flex items-center justify-center gap-2 shadow-sm"
               >
-                <KeyRound className="w-4 h-4 text-emerald-400" />
+                <KeyRound className="w-4 h-4 text-stone-950" />
                 <span>Sign In Workspace</span>
               </button>
             )}
+          </div>
+        </div>
+      </div>
 
+      {/* Unauthenticated Locked State Banner */}
+      {!user ? (
+        <div id="unauthenticated-locked-banner" className="bg-stone-900 border border-stone-800 rounded-xl p-8 sm:p-12 text-center shadow-md">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center mx-auto mb-4 text-emerald-400">
+            <Lock className="w-7 h-7" />
+          </div>
+          <h2 className="text-xl sm:text-2xl font-bold text-stone-100 tracking-tight">
+            Sign in to access your private CARE workspace
+          </h2>
+          <p className="text-sm text-stone-400 max-w-lg mx-auto mt-2 leading-relaxed">
+            All Data Science journals, canonical concept extractions, and mathematical decay priority queues are securely isolated to your authenticated Firebase UID. Sign in to log journals and view your personalized retention queue.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <button
+              id="btn-locked-banner-sign-in"
               type="button"
-              onClick={fetchData}
-              disabled={isLoadingData}
-              className="p-2.5 bg-stone-800 hover:bg-stone-750 text-stone-300 rounded-lg border border-stone-700 transition-colors"
-              title="Refresh journal entries and topics"
+              onClick={onOpenAuth}
+              className="py-2.5 px-6 bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-semibold rounded-lg text-sm transition-colors flex items-center gap-2 shadow-sm"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoadingData ? 'animate-spin' : ''}`} />
+              <KeyRound className="w-4 h-4 text-stone-950" />
+              <span>Sign In to Access Workspace</span>
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* Embedded Journal Ingestion Form (when opened or when user clicks Log) */}
-      {showJournalForm && (
-        <div className="animate-in fade-in slide-in-from-top-4 duration-300">
-          <JournalEntryForm
-            onSuccess={handleJournalSuccess}
-            onCancel={() => setShowJournalForm(false)}
-          />
-        </div>
-      )}
-
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-stone-900 border border-stone-800 rounded-xl p-4">
-          <div className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-1">
-            Journals Logged
-          </div>
-          <div className="text-2xl font-bold text-stone-100 font-mono">
-            {profile?.stats?.totalJournalsLogged ?? entries.length}
-          </div>
-          <div className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
-            <BookOpen className="w-3 h-3 text-emerald-400" />
-            <span>Persisted in /journal_entries</span>
-          </div>
-        </div>
-
-        <div className="bg-stone-900 border border-stone-800 rounded-xl p-4">
-          <div className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-1">
-            Active Topics
-          </div>
-          <div className="text-2xl font-bold text-stone-100 font-mono">
-            {topics.length}
-          </div>
-          <div className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
-            <Brain className="w-3 h-3 text-emerald-400" />
-            <span>Scoped in /topic_retention_states</span>
-          </div>
-        </div>
-
-        <div className="bg-stone-900 border border-stone-800 rounded-xl p-4">
-          <div className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-1">
-            High-Decay Topics
-          </div>
-          <div className="text-2xl font-bold text-rose-400 font-mono">
-            {topics.filter((t) => t.currentPriorityScore >= 50).length}
-          </div>
-          <div className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
-            <Flame className="w-3 h-3 text-rose-400" />
-            <span>Priority(t) &gt; 50.0</span>
-          </div>
-        </div>
-
-        <div className="bg-stone-900 border border-stone-800 rounded-xl p-4">
-          <div className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-1">
-            Concept Extraction
-          </div>
-          <div className="text-2xl font-bold text-emerald-400 font-mono">
-            Gemini 3.8
-          </div>
-          <div className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-amber-400" />
-            <span>Structured response_schema</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Two-Column Workspace Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column: Recent Journal Entries Feed */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="mt-8 pt-6 border-t border-stone-800/80 flex flex-wrap justify-center gap-6 text-xs text-stone-400">
             <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-emerald-400" />
-              <h2 className="text-base font-semibold text-stone-100">Work Journal Feed</h2>
-              <span className="text-xs text-stone-500 font-mono">({entries.length})</span>
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Zero Cross-User Data Exposure</span>
             </div>
-
-            {!showJournalForm && (
-              <button
-                type="button"
-                onClick={() => setShowJournalForm(true)}
-                className="text-xs text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>New Entry</span>
-              </button>
-            )}
-          </div>
-
-          <JournalFeed
-            entries={entries}
-            isLoading={isLoadingData}
-            onSelectConcept={(concept) => setSelectedConcept(concept)}
-          />
-        </div>
-
-        {/* Right Column: Topic Retention States & Decay Rankings */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Database className="w-4 h-4 text-emerald-400" />
+              <span>Owner-Bound Firestore Collections</span>
+            </div>
             <div className="flex items-center gap-2">
               <Brain className="w-4 h-4 text-emerald-400" />
-              <h2 className="text-base font-semibold text-stone-100">Retention Decay Queue</h2>
-              <span className="text-xs text-stone-500 font-mono">({topics.length})</span>
+              <span>Gemini 3.8 Flash Concept Extraction</span>
             </div>
-            <span className="text-[11px] text-stone-400 font-mono">Priority(t) Desc</span>
-          </div>
-
-          <TopicRetentionList
-            topics={topics}
-            isLoading={isLoadingData}
-            onInitiateRecall={(topic) => {
-              alert(`Ready for Slice 4: Socratic Peer Interview for "${topic.canonicalName}" (Priority: ${topic.currentPriorityScore.toFixed(1)})`);
-            }}
-          />
-
-          {/* Heuristic Formula Card */}
-          <div className="p-4 bg-stone-900 border border-stone-800 rounded-xl text-xs space-y-2">
-            <div className="font-semibold text-stone-200 flex items-center gap-1.5">
-              <Cpu className="w-3.5 h-3.5 text-emerald-400" />
-              <span>CARE Priority Formula</span>
-            </div>
-            <div className="p-2.5 bg-stone-950 rounded-lg font-mono text-[11px] text-emerald-300 border border-stone-850">
-              Priority(t) = [0.40·T(t) + 0.35·A(t) + 0.25·H(t)] × M(t)
-            </div>
-            <p className="text-[11px] text-stone-400 leading-relaxed">
-              T(t) accounts for elapsed forgetting time; A(t) captures cognitive offload risk from AI assistance;
-              H(t) reflects historical test performance gaps; and M(t) scales by canonical concept importance.
-            </p>
           </div>
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Embedded Journal Ingestion Form (when opened or when user clicks Log) */}
+          {showJournalForm && (
+            <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+              <JournalEntryForm
+                onSuccess={handleJournalSuccess}
+                onCancel={() => setShowJournalForm(false)}
+              />
+            </div>
+          )}
+
+          {/* Metrics Row */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-stone-900 border border-stone-800 rounded-xl p-4">
+              <div className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-1">
+                Journals Logged
+              </div>
+              <div className="text-2xl font-bold text-stone-100 font-mono">
+                {profile?.stats?.totalJournalsLogged ?? entries.length}
+              </div>
+              <div className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
+                <BookOpen className="w-3 h-3 text-emerald-400" />
+                <span>Persisted in /journal_entries</span>
+              </div>
+            </div>
+
+            <div className="bg-stone-900 border border-stone-800 rounded-xl p-4">
+              <div className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-1">
+                Active Topics
+              </div>
+              <div className="text-2xl font-bold text-stone-100 font-mono">
+                {topics.length}
+              </div>
+              <div className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
+                <Brain className="w-3 h-3 text-emerald-400" />
+                <span>Scoped in /topic_retention_states</span>
+              </div>
+            </div>
+
+            <div className="bg-stone-900 border border-stone-800 rounded-xl p-4">
+              <div className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-1">
+                High-Decay Topics
+              </div>
+              <div className="text-2xl font-bold text-rose-400 font-mono">
+                {topics.filter((t) => t.currentPriorityScore >= 50).length}
+              </div>
+              <div className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
+                <Flame className="w-3 h-3 text-rose-400" />
+                <span>Priority(t) &gt; 50.0</span>
+              </div>
+            </div>
+
+            <div className="bg-stone-900 border border-stone-800 rounded-xl p-4">
+              <div className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-1">
+                Concept Extraction
+              </div>
+              <div className="text-2xl font-bold text-emerald-400 font-mono">
+                Gemini 3.8
+              </div>
+              <div className="text-[11px] text-stone-500 mt-1 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-400" />
+                <span>Structured response_schema</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Two-Column Workspace Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Left Column: Recent Journal Entries Feed */}
+            <div className="lg:col-span-7 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-emerald-400" />
+                  <h2 className="text-base font-semibold text-stone-100">Work Journal Feed</h2>
+                  <span className="text-xs text-stone-500 font-mono">({entries.length})</span>
+                </div>
+
+                {!showJournalForm && (
+                  <button
+                    type="button"
+                    onClick={() => setShowJournalForm(true)}
+                    className="text-xs text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>New Entry</span>
+                  </button>
+                )}
+              </div>
+
+              <JournalFeed
+                entries={entries}
+                isLoading={isLoadingData}
+                onSelectConcept={(concept) => setSelectedConcept(concept)}
+              />
+            </div>
+
+            {/* Right Column: Topic Retention States & Decay Rankings */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-emerald-400" />
+                  <h2 className="text-base font-semibold text-stone-100">Retention Decay Queue</h2>
+                  <span className="text-xs text-stone-500 font-mono">({topics.length})</span>
+                </div>
+                <span className="text-[11px] text-stone-400 font-mono">Priority(t) Desc</span>
+              </div>
+
+              <TopicRetentionList
+                topics={topics}
+                isLoading={isLoadingData}
+                onInitiateRecall={(topic) => {
+                  alert(`Ready for Slice 4: Socratic Peer Interview for "${topic.canonicalName}" (Priority: ${topic.currentPriorityScore.toFixed(1)})`);
+                }}
+              />
+
+              {/* Heuristic Formula Card */}
+              <div className="p-4 bg-stone-900 border border-stone-800 rounded-xl text-xs space-y-2">
+                <div className="font-semibold text-stone-200 flex items-center gap-1.5">
+                  <Cpu className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>CARE Priority Formula</span>
+                </div>
+                <div className="p-2.5 bg-stone-950 rounded-lg font-mono text-[11px] text-emerald-300 border border-stone-850">
+                  Priority(t) = [0.40·T(t) + 0.35·A(t) + 0.25·H(t)] × M(t)
+                </div>
+                <p className="text-[11px] text-stone-400 leading-relaxed">
+                  T(t) accounts for elapsed forgetting time; A(t) captures cognitive offload risk from AI assistance;
+                  H(t) reflects historical test performance gaps; and M(t) scales by canonical concept importance.
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Selected Concept Inspector Modal */}
       {selectedConcept && (

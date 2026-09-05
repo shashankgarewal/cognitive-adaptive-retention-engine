@@ -1,12 +1,24 @@
 """
 CARE - Firebase Auth Token Verification Dependency
 Extracts and validates Firebase JWT tokens to enforce user isolation.
+Strictly forbids mock, guest, or unauthenticated fallbacks.
 """
 
 from typing import Dict, Any, Optional
-from fastapi import Header, HTTPException, status, Depends
+from fastapi import Header, HTTPException, status
 from firebase_admin import auth
 from backend.dependencies.firebase_client import get_firebase_app
+
+# Banned mock, test, or placeholder user IDs
+BANNED_MOCK_UIDS = {
+    "mock-user",
+    "guest",
+    "guest-user",
+    "verified-session-user",
+    "anonymous",
+    "test-user",
+    "test_user",
+}
 
 
 async def verify_firebase_token(
@@ -16,15 +28,17 @@ async def verify_firebase_token(
     FastAPI dependency that parses and validates the Firebase ID token
     from the HTTP Authorization header (format: 'Bearer <token>').
     Returns the decoded token claims containing uid, email, etc.
+    Strictly raises HTTP 401 Unauthorized if token is missing, malformed,
+    expired, or associated with mock/guest fallback identities.
     """
     if not authorization:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing Authorization header",
+            detail="Missing Authorization header. Sign in to access your private CARE workspace.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    parts = authorization.split()
+    parts = authorization.strip().split()
     if len(parts) != 2 or parts[0].lower() != "bearer":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -32,21 +46,45 @@ async def verify_firebase_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    id_token = parts[1]
+    id_token = parts[1].strip()
+    if not id_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Bearer token cannot be empty",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     try:
         # Ensure Firebase app is initialized
-        get_firebase_app()
+        app = get_firebase_app()
+        if not app:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Firebase authentication backend unavailable",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         # Verify the ID token using Firebase Admin
         decoded_token = auth.verify_id_token(id_token, check_revoked=True)
         uid = decoded_token.get("uid")
-        if not uid:
+        if not uid or not isinstance(uid, str) or not uid.strip():
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token does not contain a valid user identifier (uid)",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+
+        # Reject any mock/guest fallback identities
+        if uid.lower().strip() in BANNED_MOCK_UIDS:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Mock or guest user sessions are prohibited. Valid Firebase Authentication required.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         return decoded_token
+    except HTTPException:
+        raise
     except auth.RevokedIdTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -56,7 +94,7 @@ async def verify_firebase_token(
     except auth.ExpiredIdTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication token has expired",
+            detail="Authentication token has expired. Please sign in again.",
             headers={"WWW-Authenticate": "Bearer"},
         )
     except auth.InvalidIdTokenError as e:
@@ -72,3 +110,4 @@ async def verify_firebase_token(
             detail=f"Authentication verification failed: {str(e)}",
             headers={"WWW-Authenticate": "Bearer"},
         )
+

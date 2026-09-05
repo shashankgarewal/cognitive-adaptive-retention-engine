@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from google.cloud import firestore
 
-from backend.dependencies.auth import verify_firebase_token
+from backend.dependencies.auth import verify_firebase_token, BANNED_MOCK_UIDS
 from backend.dependencies.firebase_client import get_firestore_client
 from backend.models.schemas import (
     JournalEntryCreate,
@@ -31,7 +31,11 @@ from backend.services.recall_heuristic import (
 
 logger = logging.getLogger("care.journal_router")
 
-router = APIRouter(tags=["Journal & Topics"])
+# Router enforces token verification on all registered endpoints
+router = APIRouter(
+    dependencies=[Depends(verify_firebase_token)],
+    tags=["Journal & Topics"],
+)
 
 # In-memory storage fallback for local dev when Firestore credentials are not configured
 _in_memory_journals: Dict[str, List[Dict[str, Any]]] = {}
@@ -55,12 +59,14 @@ async def create_journal_entry(
     Asynchronously extracts canonical concepts with Gemini 3.8 Flash (response_schema).
     Updates recall priority scores with decay heuristics.
     Persists journal entries and topic retention states in user-isolated Firestore collections.
+    Strictly forbids unauthenticated or mock/guest identities.
     """
     user_id = user_claims.get("uid")
-    if not user_id:
+    if not user_id or not isinstance(user_id, str) or user_id.lower().strip() in BANNED_MOCK_UIDS:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authenticated user UID missing from token claims.",
+            detail="Unauthorized: Valid authenticated user required. Mock or guest sessions are prohibited.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     # Defensive input validation
@@ -230,13 +236,14 @@ async def get_journal_entries(
 ):
     """
     Retrieves the user's journal entries from /users/{userId}/journal_entries.
-    Strictly isolated to request.auth.uid.
+    Strictly isolated to request.auth.uid. Enforces HTTP 401 on missing or invalid token.
     """
     user_id = user_claims.get("uid")
-    if not user_id:
+    if not user_id or not isinstance(user_id, str) or user_id.lower().strip() in BANNED_MOCK_UIDS:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User claims missing UID.",
+            detail="Unauthorized: Valid authenticated user required. Mock or guest sessions are prohibited.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     db = get_firestore_client()
@@ -286,12 +293,14 @@ async def get_topics(
     Retrieves all topic retention states for the authenticated user.
     Dynamically recalculates currentPriorityScore based on elapsed decay time.
     Returns topics sorted by currentPriorityScore descending (highest priority first).
+    Strictly isolated to request.auth.uid. Enforces HTTP 401 on missing or invalid token.
     """
     user_id = user_claims.get("uid")
-    if not user_id:
+    if not user_id or not isinstance(user_id, str) or user_id.lower().strip() in BANNED_MOCK_UIDS:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User claims missing UID.",
+            detail="Unauthorized: Valid authenticated user required. Mock or guest sessions are prohibited.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     db = get_firestore_client()

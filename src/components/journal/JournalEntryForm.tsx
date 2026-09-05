@@ -69,30 +69,6 @@ const AI_RELIANCE_OPTIONS: {
   },
 ];
 
-const PRESET_JOURNALS = [
-  {
-    title: 'Fine-tuning LoRA Adapters on Mistral 7B',
-    tool: 'Cursor Agent',
-    level: 'agentic' as AiAssistanceLevel,
-    content:
-      'Implemented Low-Rank Adaptation (LoRA) for rank=16 and alpha=32 on Mistral 7B attention projections (q_proj, v_proj). Monitored training cross-entropy loss, gradient norm clipping, and evaluated against validation perplexity to prevent catastrophic forgetting.',
-  },
-  {
-    title: 'Stratified K-Fold Cross-Validation & Covariance Shift',
-    tool: 'Claude Code',
-    level: 'spec_driven' as AiAssistanceLevel,
-    content:
-      'Constructed a 5-fold Stratified Cross-Validation pipeline for an imbalanced customer churn dataset. Identified distribution drift using Kolmogorov-Smirnov statistical tests and corrected for covariance shift with importance weighting.',
-  },
-  {
-    title: 'Bayesian Parameter Estimation via Markov Chain Monte Carlo',
-    tool: 'None',
-    level: 'none' as AiAssistanceLevel,
-    content:
-      'Manually derived posterior distributions for a hierarchical Gaussian model using PyMC and Stan. Evaluated Gelman-Rubin diagnostic R-hat metrics and effective sample size to verify MCMC chain convergence.',
-  },
-];
-
 export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ onSuccess, onCancel }) => {
   const [title, setTitle] = useState('');
   const [rawContent, setRawContent] = useState('');
@@ -105,14 +81,6 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ onSuccess, o
     concepts: ExtractedConcept[];
     summary?: string;
   } | null>(null);
-
-  const handleApplyPreset = (preset: (typeof PRESET_JOURNALS)[0]) => {
-    setTitle(preset.title);
-    setRawContent(preset.content);
-    setAiAssistanceLevel(preset.level);
-    setAiToolUsed(preset.tool);
-    setError(null);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,31 +163,6 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ onSuccess, o
           </button>
         )}
       </div>
-
-      {/* Preset Quick-Fill Chips */}
-      {!extractedResult && (
-        <div className="mt-4 pt-1">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-xs font-medium text-stone-300">Quick-Fill DS Scenarios:</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {PRESET_JOURNALS.map((preset, idx) => (
-              <button
-                key={idx}
-                id={`btn-preset-${idx}`}
-                type="button"
-                onClick={() => handleApplyPreset(preset)}
-                className="text-xs px-2.5 py-1.5 rounded-lg bg-stone-850 hover:bg-stone-800 text-stone-300 border border-stone-750 hover:border-stone-650 transition-colors text-left flex items-center gap-1.5"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                {preset.title.split(' ')[0]} {preset.title.split(' ')[1]}...
-                <span className="text-[10px] text-stone-500 uppercase font-mono">({preset.level})</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Error Alert */}
       {error && (
