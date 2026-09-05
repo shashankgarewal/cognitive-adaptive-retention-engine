@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from backend.routers.auth import router as auth_router
+from backend.routers.journal import router as journal_router
 from backend.config import settings
 
 app = FastAPI(
@@ -32,6 +33,7 @@ app.add_middleware(
 # API Routers
 # -----------------------------------------------------------------------------
 app.include_router(auth_router)
+app.include_router(journal_router)
 
 
 @app.get("/api/health")

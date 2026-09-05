@@ -62,4 +62,55 @@ export const api = {
     const data = await res.json();
     return data.user;
   },
+
+  async createJournalEntry(payload: {
+    title: string;
+    rawContent: string;
+    aiAssistanceLevel: string;
+    aiToolUsed?: string;
+  }) {
+    const headers = await getAuthHeaders();
+    const res = await fetch('/api/journal/entries', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ detail: 'Failed to ingest journal entry' }));
+      throw new Error(errorData.detail || 'Failed to ingest journal entry');
+    }
+
+    return res.json();
+  },
+
+  async getJournalEntries() {
+    const headers = await getAuthHeaders();
+    const res = await fetch('/api/journal/entries', {
+      method: 'GET',
+      headers,
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ detail: 'Failed to fetch journal entries' }));
+      throw new Error(errorData.detail || 'Failed to fetch journal entries');
+    }
+
+    return res.json();
+  },
+
+  async getTopics() {
+    const headers = await getAuthHeaders();
+    const res = await fetch('/api/topics', {
+      method: 'GET',
+      headers,
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ detail: 'Failed to fetch topics' }));
+      throw new Error(errorData.detail || 'Failed to fetch topics');
+    }
+
+    return res.json();
+  },
 };

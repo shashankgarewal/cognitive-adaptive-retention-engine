@@ -99,3 +99,24 @@ export interface RecallSession {
   startedAt: string;
   completedAt?: string;
 }
+
+export interface JournalIngestionResponse {
+  status: string;
+  entry: JournalEntry;
+  summary?: string;
+  detectedComplexity?: 'foundational' | 'intermediate' | 'advanced';
+  extractedConcepts: ExtractedConcept[];
+  updatedTopics: TopicRetentionState[];
+}
+
+export interface JournalListResponse {
+  status: string;
+  entries: JournalEntry[];
+  total: number;
+}
+
+export interface TopicsListResponse {
+  status: string;
+  topics: TopicRetentionState[];
+  total: number;
+}

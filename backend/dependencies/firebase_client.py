@@ -48,7 +48,7 @@ def get_firestore_client():
             # Connect using specific firestore database ID
             _firestore_db = firestore.client(
                 app=_firebase_app,
-                database=settings.FIRESTORE_DATABASE_ID
+                database_id=settings.FIRESTORE_DATABASE_ID,
             )
         except Exception as e:
             print(f"[Firestore Client Fallback]: {e}")

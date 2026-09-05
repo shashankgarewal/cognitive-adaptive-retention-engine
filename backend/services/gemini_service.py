@@ -69,7 +69,7 @@ Extract canonical concepts, summary, and complexity following the schema."""
         if client is not None:
             try:
                 # Enforce native response_schema using the google-genai SDK
-                response = client.models.generate_content(
+                response = await client.aio.models.generate_content(
                     model="gemini-3.8-flash",
                     contents=user_prompt,
                     config=types.GenerateContentConfig(

@@ -97,6 +97,27 @@ class JournalEntry(FirestoreBaseModel, JournalEntryCreate):
     createdAt: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
 
 
+class JournalIngestionResponse(BaseModel):
+    status: str = "ok"
+    entry: JournalEntry
+    summary: Optional[str] = None
+    detectedComplexity: Optional[str] = None
+    extractedConcepts: List[ExtractedConcept] = Field(default_factory=list)
+    updatedTopics: List[Any] = Field(default_factory=list)
+
+
+class JournalListResponse(BaseModel):
+    status: str = "ok"
+    entries: List[JournalEntry]
+    total: int
+
+
+class TopicsListResponse(BaseModel):
+    status: str = "ok"
+    topics: List[Any]
+    total: int
+
+
 # -----------------------------------------------------------------------------
 # Topic Retention State Schemas
 # -----------------------------------------------------------------------------
