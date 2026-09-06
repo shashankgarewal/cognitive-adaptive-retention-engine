@@ -9,9 +9,10 @@ import { ShieldCheck, LogOut, User, Sparkles, Database, Terminal } from 'lucide-
 
 interface HeaderProps {
   onOpenAuth: () => void;
+  onViewLanding?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenAuth, onViewLanding }) => {
   const { user, profile, signOut } = useAuth();
 
   return (
@@ -52,6 +53,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
         <div className="flex items-center gap-3">
           {user ? (
             <div className="flex items-center gap-3">
+              {onViewLanding && (
+                <button
+                  id="btn-header-view-landing"
+                  type="button"
+                  onClick={onViewLanding}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-700 bg-stone-800/80 hover:bg-stone-700/80 text-stone-300 text-xs font-medium transition-colors"
+                >
+                  <span>Public Landing Page</span>
+                </button>
+              )}
+
               {/* User profile capsule */}
               <div className="flex items-center gap-2.5 px-3 py-1.5 bg-stone-800/80 border border-stone-700/60 rounded-lg">
                 {user.photoURL ? (
