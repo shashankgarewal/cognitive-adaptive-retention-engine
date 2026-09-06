@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import { TopicRetentionState, JournalEntry, ExtractedConcept } from '../types';
-import { ZeroStateHeader } from '../components/dashboard/ZeroStateHeader';
-import { ZeroStateBlueprintPanel } from '../components/dashboard/ZeroStateBlueprintPanel';
+import { AppNavbar } from '../components/layout/AppNavbar';
+import { AppFooter } from '../components/layout/AppFooter';
 import { JournalEntryForm } from '../components/journal/JournalEntryForm';
 import {
   TrendingDown,
@@ -30,7 +30,6 @@ export const AnalyticsDecayPage: React.FC = () => {
   const [topics, setTopics] = useState<TopicRetentionState[]>([]);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isBlueprintOpen, setIsBlueprintOpen] = useState(true);
 
   // Ebbinghaus simulator selected curve
   const [selectedTrajectory, setSelectedTrajectory] = useState<
@@ -122,20 +121,9 @@ export const AnalyticsDecayPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-[#1E293B] font-sans flex flex-col selection:bg-emerald-500/20 selection:text-emerald-900 antialiased">
       {/* 1. Global Navigation Header */}
-      <ZeroStateHeader
-        onLogClick={() => navigate('/journal/editor')}
-        onViewLanding={() => navigate('/')}
-        onToggleBlueprint={() => setIsBlueprintOpen((prev) => !prev)}
+      <AppNavbar
         activeNav="analytics"
-        onSelectNav={(navId) => {
-          if (navId === 'feed') navigate('/feed');
-          else if (navId === 'editor' || navId === 'writer') navigate('/journal/editor');
-          else if (navId === 'hub') navigate('/hub');
-          else if (navId === 'analytics') navigate('/analytics');
-          else if (navId === 'spec') navigate('/spec');
-        }}
-        logStreak={12}
-        recallStreak={5}
+        topics={topics}
       />
 
       {/* 2. Page Header & Stats Banner */}
@@ -160,33 +148,23 @@ export const AnalyticsDecayPage: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={() => setIsBlueprintOpen((prev) => !prev)}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all font-mono text-xs font-semibold cursor-pointer shadow-2xs ${
-                isBlueprintOpen
-                  ? 'bg-[#ECFDF5] border-emerald-300 text-[#006948] hover:bg-emerald-100/60'
-                  : 'bg-white border-[#E5E0D8] text-[#505F76] hover:text-[#1E293B] hover:bg-[#FAF8F5]'
-              }`}
+              onClick={() => navigate('/spec')}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E0D8] bg-white text-[#505F76] hover:text-[#1E293B] hover:bg-[#FAF8F5] transition-all font-mono text-xs font-semibold cursor-pointer shadow-2xs"
             >
               <Layers className="w-3.5 h-3.5 text-[#006948]" />
-              <span>System Blueprint</span>
-              <span className="text-[10px] ml-0.5">
-                <strong className={isBlueprintOpen ? 'text-[#006948]' : 'text-slate-400'}>
-                  [{isBlueprintOpen ? 'ACTIVE' : 'HIDDEN'}]
-                </strong>
-              </span>
+              <span>Architecture Spec</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* 3. Main 2-Column Content Layout */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
-        {/* Left Column: Analytics Visualizers */}
+      {/* 3. Main Content Layout */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+        {/* Analytics Visualizers */}
         <section
           aria-label="Cognitive Decay Analytics"
-          className={`space-y-6 transition-all duration-300 ${
-            isBlueprintOpen ? 'lg:col-span-8' : 'lg:col-span-12'
-          }`}
+          className="space-y-6 w-full"
         >
           {/* Card 1: Interactive Ebbinghaus Retention Trajectory Simulator */}
           <div className="bg-white rounded-2xl border border-[#E5E0D8] p-6 shadow-2xs">
@@ -420,34 +398,10 @@ export const AnalyticsDecayPage: React.FC = () => {
             </div>
           </div>
         </section>
-
-        {/* Right Column: Architectural Context Blueprint Panel (Collapsible) */}
-        {isBlueprintOpen && (
-          <aside
-            aria-label="System Blueprint Panel"
-            className="lg:col-span-4 w-full animate-in fade-in slide-in-from-right-4 duration-200 sticky top-20"
-          >
-            <ZeroStateBlueprintPanel onClose={() => setIsBlueprintOpen(false)} />
-          </aside>
-        )}
       </main>
 
-      {/* 4. Footer */}
-      <footer className="border-t border-[#E5E0D8] bg-white py-6 px-4 sm:px-6 lg:px-8 text-xs text-[#505F76] mt-12">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-center sm:text-left">
-            <span className="font-serif font-bold text-[#1E293B]">
-              CARE Cognitive &amp; Adaptive Retention Engine
-            </span>
-            <span className="hidden sm:inline text-slate-300">•</span>
-            <span>Mathematical Ebbinghaus decay analytics counteracting engineering memory decay.</span>
-          </div>
-          <div className="flex items-center gap-3 font-mono text-[11px]">
-            <span className="text-[#006948] font-bold">Analytics Engine v2.4</span>
-            <span className="text-slate-400">&copy; 2025 CARE Engine</span>
-          </div>
-        </div>
-      </footer>
+      {/* 4. Unified Full-Width Application Footer */}
+      <AppFooter />
     </div>
   );
 };

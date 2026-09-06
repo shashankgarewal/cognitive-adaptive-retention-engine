@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { LandingPage } from '../components/landing/LandingPage';
 import { AuthModal } from '../components/auth/AuthModal';
 
 export const LandingPageWrapper: React.FC = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
@@ -22,6 +20,7 @@ export const LandingPageWrapper: React.FC = () => {
       />
       {isAuthModalOpen && (
         <AuthModal
+          isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
           onSuccess={() => {
             setIsAuthModalOpen(false);
@@ -32,3 +31,4 @@ export const LandingPageWrapper: React.FC = () => {
     </>
   );
 };
+

@@ -14,12 +14,14 @@ import { JournalEntry } from '../../types';
 
 interface JournalStreamCardProps {
   entry: JournalEntry;
+  selectedTags?: string[];
   onSelectConcept?: (conceptName: string) => void;
   onOpenRecallDiagnostic?: (entry: JournalEntry) => void;
 }
 
 export const JournalStreamCard: React.FC<JournalStreamCardProps> = ({
   entry,
+  selectedTags = [],
   onSelectConcept,
   onOpenRecallDiagnostic,
 }) => {
@@ -146,27 +148,47 @@ export const JournalStreamCard: React.FC<JournalStreamCardProps> = ({
         {/* Concept Tags */}
         <div className="flex flex-wrap items-center gap-1.5">
           {entry.tags && entry.tags.length > 0 ? (
-            entry.tags.map((tag, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => onSelectConcept && onSelectConcept(tag.replace('#', ''))}
-                className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#F0F3FF] hover:bg-emerald-50 border border-[#E7EEFF] hover:border-emerald-200 text-[#1E293B] font-mono text-[11px] font-medium transition-colors cursor-pointer"
-              >
-                {tag.startsWith('#') ? tag : `#${tag}`}
-              </button>
-            ))
+            entry.tags.map((rawTag, idx) => {
+              const clean = rawTag.replace('#', '').trim();
+              const isSelected = selectedTags.some(
+                (st) => st.toLowerCase() === clean.toLowerCase()
+              );
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => onSelectConcept && onSelectConcept(clean)}
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full font-mono text-[11px] font-medium transition-colors cursor-pointer border ${
+                    isSelected
+                      ? 'bg-[#006948] text-white border-[#006948] font-bold shadow-2xs'
+                      : 'bg-[#F0F3FF] hover:bg-emerald-50 border-[#E7EEFF] hover:border-emerald-200 text-[#1E293B]'
+                  }`}
+                >
+                  {rawTag.startsWith('#') ? rawTag : `#${rawTag}`}
+                </button>
+              );
+            })
           ) : (
-            (entry.extractedConcepts || []).map((concept, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => onSelectConcept && onSelectConcept(concept.canonicalName)}
-                className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#F0F3FF] hover:bg-emerald-50 border border-[#E7EEFF] hover:border-emerald-200 text-[#1E293B] font-mono text-[11px] font-medium transition-colors cursor-pointer"
-              >
-                #{concept.canonicalName}
-              </button>
-            ))
+            (entry.extractedConcepts || []).map((concept, idx) => {
+              const clean = concept.canonicalName.replace('#', '').trim();
+              const isSelected = selectedTags.some(
+                (st) => st.toLowerCase() === clean.toLowerCase()
+              );
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => onSelectConcept && onSelectConcept(clean)}
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full font-mono text-[11px] font-medium transition-colors cursor-pointer border ${
+                    isSelected
+                      ? 'bg-[#006948] text-white border-[#006948] font-bold shadow-2xs'
+                      : 'bg-[#F0F3FF] hover:bg-emerald-50 border-[#E7EEFF] hover:border-emerald-200 text-[#1E293B]'
+                  }`}
+                >
+                  #{clean}
+                </button>
+              );
+            })
           )}
         </div>
 

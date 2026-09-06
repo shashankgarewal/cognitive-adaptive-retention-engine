@@ -77,7 +77,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </main>
 
       {/* 6. Privacy Banner & Footer */}
-      <PrivacyAndFooter onSignInClick={handleSignInClick} />
+      <PrivacyAndFooter onSignInClick={handleSignInClick} onOpenSpec={onOpenSpec} />
     </div>
   );
 };

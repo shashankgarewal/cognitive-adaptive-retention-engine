@@ -26,6 +26,9 @@ import { JournalEditorToolbar } from '../components/journal/JournalEditorToolbar
 import { JournalEditorCanvas } from '../components/journal/JournalEditorCanvas';
 import { CoThinkingDrawer } from '../components/journal/CoThinkingDrawer';
 import { aiService, extractConceptsLocally } from '../lib/aiService';
+import { AppNavbar } from '../components/layout/AppNavbar';
+import { AppFooter } from '../components/layout/AppFooter';
+import { recordJournalCompletion } from '../lib/streakService';
 
 export const JournalWriterPage: React.FC = () => {
   const { user, profile, signOut } = useAuth();
@@ -43,7 +46,6 @@ export const JournalWriterPage: React.FC = () => {
   const [isSynthesizingTitle, setIsSynthesizingTitle] = useState(false);
   const [isPolishing, setIsPolishing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   // Global keyboard shortcut: Cmd+/ or Ctrl+/ to toggle Co-Thinking drawer
   useEffect(() => {
@@ -222,6 +224,9 @@ Implementation Details:
       }
 
       await api.createJournalEntry(payload);
+      if (user?.uid) {
+        recordJournalCompletion(user.uid);
+      }
       setTitle(finalTitle);
       showToast('✓ Journal Entry committed to CARE retention database');
 
@@ -230,6 +235,9 @@ Implementation Details:
       }
     } catch (e: any) {
       console.warn('Journal save result:', e);
+      if (user?.uid) {
+        recordJournalCompletion(user.uid);
+      }
       setTitle(finalTitle);
       showToast('✓ Saved entry to CARE retention database');
       if (openAiDrawerPostSave) {
@@ -255,162 +263,7 @@ Implementation Details:
       )}
 
       {/* 1. Global Navigation Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E5E0D8]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          {/* Brand & Streaks */}
-          <div className="flex items-center gap-4 sm:gap-6">
-            <button
-              onClick={() => navigate('/feed')}
-              className="flex items-center gap-2.5 group cursor-pointer text-left focus:outline-none"
-            >
-              <div className="w-8 h-8 rounded-lg bg-[#006948] text-white flex items-center justify-center font-serif text-base font-bold shadow-xs group-hover:bg-[#005439] transition-colors">
-                C
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-serif font-bold text-lg text-[#111C2D] tracking-tight leading-none">
-                    CARE
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#E7EEFF] text-[#005691] border border-[#D0DEFF]">
-                    v2.4
-                  </span>
-                </div>
-                <p className="text-[10px] font-mono text-[#505F76] hidden sm:block">
-                  Adaptive Retention Engine
-                </p>
-              </div>
-            </button>
-
-            {/* Streaks Telemetry */}
-            <div className="hidden md:flex items-center gap-2 pl-3 border-l border-[#E5E0D8]">
-              <div
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FFF8ED] border border-amber-300 text-[#8D4B00] text-xs font-mono font-medium shadow-2xs"
-                title="12 consecutive days logging work journals"
-              >
-                <Flame className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
-                <span>Log Streak: 12 Days</span>
-              </div>
-
-              <div
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F0F3FF] border border-[#D0DEFF] text-[#005691] text-xs font-mono font-medium shadow-2xs"
-                title="5 consecutive days completing recall checkpoints"
-              >
-                <Brain className="w-3.5 h-3.5 text-[#005691]" />
-                <span>Recall Streak: 5 Days</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Navigation Pills */}
-          <nav className="hidden lg:flex items-center gap-1 p-1 bg-[#FAF8F5] rounded-full border border-[#E5E0D8] text-xs font-medium">
-            <button
-              type="button"
-              onClick={() => navigate('/feed')}
-              className="px-3.5 py-1.5 rounded-full text-[#505F76] hover:text-[#111C2D] hover:bg-white/80 transition-all cursor-pointer"
-            >
-              Work Journal Feed
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/journal/editor')}
-              className="px-3.5 py-1.5 rounded-full bg-[#006948] text-white font-semibold shadow-xs cursor-pointer"
-            >
-              Journal Writer
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/hub')}
-              className="px-3.5 py-1.5 rounded-full text-[#505F76] hover:text-[#111C2D] hover:bg-white/80 transition-all cursor-pointer"
-            >
-              Retention Hub
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/analytics')}
-              className="px-3.5 py-1.5 rounded-full text-[#505F76] hover:text-[#111C2D] hover:bg-white/80 transition-all cursor-pointer"
-            >
-              Analytics &amp; Decay
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/spec')}
-              className="px-3.5 py-1.5 rounded-full text-[#505F76] hover:text-[#111C2D] hover:bg-white/80 transition-all cursor-pointer"
-            >
-              Architecture Spec
-            </button>
-          </nav>
-
-          {/* Authenticated Profile Badge */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-              className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-100 border border-transparent hover:border-[#E5E0D8] transition-all cursor-pointer"
-            >
-              <div className="w-8 h-8 rounded-full bg-[#006948]/15 border border-[#006948]/30 text-[#006948] font-mono text-xs font-bold flex items-center justify-center">
-                AK
-              </div>
-              <div className="hidden sm:flex flex-col text-left">
-                <span className="text-xs font-bold text-[#111C2D] leading-tight">
-                  {userDisplayName}
-                </span>
-                <span className="text-[10px] font-mono font-semibold text-[#006948] tracking-wider">
-                  • {userRoleBadge}
-                </span>
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-            </button>
-
-            {isProfileMenuOpen && (
-              <div className="absolute right-0 mt-2 w-60 bg-white rounded-xl border border-[#E5E0D8] shadow-xl py-2 z-50 text-left animate-in fade-in slide-in-from-top-2 duration-150">
-                <div className="px-4 py-2 border-b border-slate-100">
-                  <div className="text-xs font-bold text-[#111C2D]">{userDisplayName}</div>
-                  <div className="text-[11px] font-mono text-[#505F76]">
-                    {user?.email || 'alex.k@care-engine.internal'}
-                  </div>
-                  <div className="mt-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-50 text-[#006948] border border-emerald-200 inline-block font-semibold">
-                    Role: Lead Machine Learning Engineer
-                  </div>
-                </div>
-
-                <div className="py-1">
-                  <button
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      navigate('/feed');
-                    }}
-                    className="w-full px-4 py-2 text-xs text-[#111C2D] hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
-                  >
-                    <span>My Journal Stream</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      navigate('/analytics');
-                    }}
-                    className="w-full px-4 py-2 text-xs text-[#111C2D] hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
-                  >
-                    <span>Cognitive Decay Reports</span>
-                  </button>
-                </div>
-
-                <div className="border-t border-slate-100 pt-1">
-                  <button
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      signOut();
-                    }}
-                    className="w-full px-4 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer font-medium"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Sign Out</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+      <AppNavbar activeNav="editor" />
 
       {/* 2. Telemetry Control Bar */}
       <section className="bg-white border-b border-[#E5E0D8] shadow-2xs">
@@ -580,6 +433,9 @@ Implementation Details:
           <span>{isSaving ? 'Saving & Co-Thinking...' : '✨ Save & Co-Think with AI'}</span>
         </button>
       </div>
+
+      {/* Unified Full-Width Application Footer */}
+      <AppFooter />
     </div>
   );
 };

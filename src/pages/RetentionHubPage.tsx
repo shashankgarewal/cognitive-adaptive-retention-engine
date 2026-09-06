@@ -9,8 +9,9 @@ import {
   ExtractedConcept,
 } from '../types';
 import { getDescriptiveFragileSubconcept } from '../lib/retentionFragility';
-import { ZeroStateHeader } from '../components/dashboard/ZeroStateHeader';
-import { ZeroStateBlueprintPanel } from '../components/dashboard/ZeroStateBlueprintPanel';
+import { recordRecallCompletion } from '../lib/streakService';
+import { AppNavbar } from '../components/layout/AppNavbar';
+import { AppFooter } from '../components/layout/AppFooter';
 import { TopicPreSessionCard } from '../components/recall/TopicPreSessionCard';
 import { TopicSelectionModal } from '../components/recall/TopicSelectionModal';
 import { RecallSessionModal } from '../components/recall/RecallSessionModal';
@@ -135,7 +136,6 @@ export const RetentionHubPage: React.FC = () => {
 
   const [topics, setTopics] = useState<TopicRetentionState[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isBlueprintOpen, setIsBlueprintOpen] = useState(false);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -216,6 +216,9 @@ export const RetentionHubPage: React.FC = () => {
   const handleRecallComplete = async () => {
     setActiveRecallSession(null);
     setActiveRecallTopic(null);
+    if (user?.uid) {
+      recordRecallCompletion(user.uid);
+    }
     showToast('Recall session recorded! Retention scores calibrated.');
     await refreshProfile();
     await fetchTopics();
@@ -292,129 +295,14 @@ export const RetentionHubPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-[#111C2D] font-sans flex flex-col selection:bg-emerald-500/20 selection:text-emerald-900 antialiased pb-28">
       
-      {/* 1. Global Navigation Header */}
-      <header id="global-header" className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E5E0D8]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          
-          {/* Brand & Streaks */}
-          <div className="flex items-center gap-4 sm:gap-6">
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="flex items-center gap-2.5 group cursor-pointer text-left"
-              title="CARE - Adaptive Retention"
-            >
-              <div className="w-8 h-8 rounded-lg bg-[#006948] text-white flex items-center justify-center font-serif text-base font-bold shadow-xs group-hover:bg-[#005439] transition-colors">
-                C
-              </div>
-              <div>
-                <div className="font-serif font-bold text-sm tracking-tight text-[#111C2D] group-hover:text-[#006948] transition-colors flex items-center gap-1.5">
-                  <span>CARE</span>
-                  <span className="text-slate-300 font-sans font-light">|</span>
-                  <span className="text-xs font-sans font-semibold text-slate-700">Adaptive Retention</span>
-                </div>
-                <div className="font-mono text-[10px] uppercase tracking-wider text-slate-400 font-medium">
-                  Knowledge Retention Hub
-                </div>
-              </div>
-            </button>
-
-            {/* Streaks Telemetry */}
-            <div className="hidden md:flex items-center gap-2 pl-3 border-l border-[#E5E0D8]">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FFF8ED] border border-amber-300 text-[#8D4B00] text-xs font-mono font-medium">
-                <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                <span>Log Streak: <strong>12 Days</strong></span>
-              </div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F0F3FF] border border-[#CCD8FF] text-[#111C2D] text-xs font-mono font-medium">
-                <Brain className="w-3.5 h-3.5 text-blue-600" />
-                <span>Recall Streak: <strong>5 Days</strong></span>
-              </div>
-            </div>
-          </div>
-
-          {/* Navigation Tabs */}
-          <nav className="hidden lg:flex items-center gap-1 p-1 bg-[#FAF8F5] rounded-full border border-[#E5E0D8] text-xs font-medium">
-            <button
-              type="button"
-              onClick={() => navigate('/feed')}
-              className="px-3.5 py-1.5 rounded-full text-[#64748B] hover:text-[#111C2D] hover:bg-white/80 transition-all cursor-pointer"
-            >
-              Work Journal Feed
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/journal/editor')}
-              className="px-3.5 py-1.5 rounded-full text-[#64748B] hover:text-[#111C2D] hover:bg-white/80 transition-all cursor-pointer"
-            >
-              Journal Writer
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/hub')}
-              className="px-3.5 py-1.5 rounded-full bg-[#006948] text-white font-semibold shadow-xs cursor-pointer"
-            >
-              Retention Hub
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/analytics')}
-              className="px-3.5 py-1.5 rounded-full text-[#64748B] hover:text-[#111C2D] hover:bg-white/80 transition-all cursor-pointer"
-            >
-              Analytics &amp; Decay
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/spec')}
-              className="px-3.5 py-1.5 rounded-full text-[#64748B] hover:text-[#111C2D] hover:bg-white/80 transition-all cursor-pointer"
-            >
-              Architecture Spec
-            </button>
-          </nav>
-
-          {/* Right Controls & CTA */}
-          <div className="flex items-center gap-3">
-            <button
-              id="btn-log-work-journal"
-              type="button"
-              onClick={() => navigate('/journal/editor')}
-              className="py-1.5 px-3.5 rounded-lg bg-[#006948] hover:bg-[#005439] text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="whitespace-nowrap font-medium">+ Log Work Journal</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsBlueprintOpen((prev) => !prev)}
-              className={`p-2 rounded-lg border transition-all cursor-pointer ${
-                isBlueprintOpen
-                  ? 'bg-emerald-50 border-emerald-300 text-[#006948]'
-                  : 'bg-white border-[#E5E0D8] text-slate-500 hover:text-slate-800'
-              }`}
-              title="Toggle System Architecture Blueprint"
-            >
-              <Layers className="w-4 h-4" />
-            </button>
-
-            {/* Profile Avatar */}
-            <div className="flex items-center gap-2 pl-2 border-l border-[#E5E0D8]">
-              <div
-                className="w-8 h-8 rounded-full bg-[#E7EEFF] text-[#006948] font-mono font-bold text-xs flex items-center justify-center border border-[#CCD8FF]"
-                title={user?.email || 'Data Science Engineer'}
-              >
-                {user?.displayName
-                  ? user.displayName.slice(0, 2).toUpperCase()
-                  : user?.email
-                  ? user.email.slice(0, 2).toUpperCase()
-                  : 'DS'}
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* 1. Global Navigation Navbar (Consistently styled matching Landing Header & real streaks) */}
+      <AppNavbar
+        activeNav="hub"
+        topics={topics}
+      />
 
       {/* 2. Engine Status Ribbon */}
-      <aside id="status-ribbon" className="bg-white border-b border-[#E5E0D8] py-2 px-4 sm:px-6 lg:px-8">
+      <aside id="status-ribbon" className="bg-white border-b border-[#E5E0D8] py-2.5 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 font-mono text-[11px] text-[#3D4A42]">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -435,20 +323,18 @@ export const RetentionHubPage: React.FC = () => {
               <span className="text-slate-400">Target Decay Threshold:</span>
               <span className="font-bold text-[#111C2D]">&le; 60.0 R-pts</span>
             </div>
-            <div className="flex items-center gap-1 text-[#006948] font-semibold">
+            <button
+              type="button"
+              onClick={() => navigate('/spec')}
+              className="flex items-center gap-1 text-[#006948] hover:text-[#005439] font-semibold cursor-pointer"
+              title="View Priority Calculus & Architecture Spec"
+            >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>CALCULUS v2.4</span>
-            </div>
+              <span>CALCULUS v0.1 &rarr;</span>
+            </button>
           </div>
         </div>
       </aside>
-
-      {/* Blueprint Drawer Panel if open */}
-      {isBlueprintOpen && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 w-full animate-in fade-in slide-in-from-top-3 duration-200">
-          <ZeroStateBlueprintPanel onClose={() => setIsBlueprintOpen(false)} />
-        </div>
-      )}
 
       {/* 3. Hero Overview Bento Grid (2 Columns: 8/4 Split) */}
       <section id="hero-overview" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4 w-full">
@@ -1050,6 +936,9 @@ export const RetentionHubPage: React.FC = () => {
           }}
         />
       )}
+
+      {/* Unified Full-Width Application Footer */}
+      <AppFooter />
     </div>
   );
 };

@@ -239,32 +239,6 @@ export const ZeroStateBlueprintPanel: React.FC<ZeroStateBlueprintPanelProps> = (
             </div>
           </div>
         </div>
-
-        {/* 4. Infrastructure Matrix */}
-        <div className="space-y-2.5">
-          <div className="text-xs font-mono font-semibold text-[#505F76] uppercase tracking-wider">
-            Infrastructure Matrix
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            {infraMatrix.map((item) => (
-              <div
-                key={item.label}
-                className="bg-[#FAF8F5] rounded-xl border border-[#E5E0D8] p-2.5 text-left space-y-0.5"
-              >
-                <div className="text-[10px] font-mono text-[#505F76] truncate">
-                  {item.label}
-                </div>
-                <div className="font-mono font-bold text-xs text-[#1E293B]">
-                  {item.value}
-                </div>
-                <div className="text-[10px] text-[#505F76] font-sans truncate">
-                  {item.detail}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </aside>
   );

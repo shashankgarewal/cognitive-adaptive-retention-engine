@@ -135,8 +135,8 @@ export const PipelineDiagramCard: React.FC = () => {
             <h2 className="font-serif font-bold text-xl sm:text-2xl text-[#1E293B]">
               End-to-End Reactive Telemetry &amp; Socratic Recall Pipeline
             </h2>
-            <span className="font-mono text-xs px-2 py-0.5 rounded-full bg-[#ECFDF5] border border-emerald-300 text-[#006948] font-semibold">
-              v2.4.1-rc
+            <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-[#ECFDF5] border border-emerald-300 text-[#006948] font-bold">
+              v1.0 PLANNED
             </span>
           </div>
           <p className="text-xs sm:text-sm text-[#505F76]">

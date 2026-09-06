@@ -1,48 +1,100 @@
 /**
  * CARE - ZeroStateMetricCards Component
- * 3-Card 0-State Metric Overview Row:
- * 1. Journal Volume: "0 Entries" | "Ready for initial engineering log"
- * 2. Knowledge Graph: "0 Topics" | "Concept graph idle · 0 nodes indexed"
- * 3. Cognitive Stability: "0 Topics At Risk" | "No decay detected · Baseline pristine"
+ * 3-Card Dynamic Metric Overview Row:
+ * 1. Journal Volume: Dynamic volume & AI reliance count
+ * 2. Knowledge Graph: Indexed topic nodes
+ * 3. Cognitive Stability: Active decay detection & baseline status
  */
 
 import React from 'react';
 import { BookOpen, Network, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import { JournalEntry, TopicRetentionState } from '../../types';
 
-export const ZeroStateMetricCards: React.FC = () => {
+interface ZeroStateMetricCardsProps {
+  entriesCount?: number;
+  topics?: TopicRetentionState[];
+  entries?: JournalEntry[];
+  onCardClick?: (cardId: string) => void;
+}
+
+export const ZeroStateMetricCards: React.FC<ZeroStateMetricCardsProps> = ({
+  entriesCount: propEntriesCount,
+  topics = [],
+  entries = [],
+  onCardClick,
+}) => {
+  const journalCount = propEntriesCount !== undefined ? propEntriesCount : entries.length;
+  const topicsCount = topics.length;
+
+  const highAiCount = entries.filter((e) => {
+    const reliance =
+      e.aiReliancePercentage ??
+      (e.aiAssistanceLevel === 'agentic'
+        ? 85
+        : e.aiAssistanceLevel === 'spec_driven'
+        ? 75
+        : e.aiAssistanceLevel === 'prompt_driven'
+        ? 45
+        : 15);
+    return reliance >= 60;
+  }).length;
+
+  const atRiskTopics = topics.filter((t) => {
+    const score = t.retentionScore ?? t.stabilityRatio ?? 1;
+    return score < 0.65;
+  }).length;
+
   const cards = [
     {
       id: 'journal-volume',
       title: 'Journal Volume',
-      value: '0 Entries',
-      status: 'Ready for initial engineering log',
+      value: `${journalCount} Entr${journalCount === 1 ? 'y' : 'ies'}`,
+      status:
+        journalCount === 0
+          ? 'Ready for initial engineering log'
+          : `${highAiCount} logged with AI assistance tracking`,
       icon: BookOpen,
       iconBg: 'bg-[#F0F3FF]',
       iconColor: 'text-[#006948]',
-      badge: 'IDLE',
-      badgeColor: 'bg-slate-100 text-[#505F76] border-slate-200',
+      badge: journalCount === 0 ? 'IDLE' : 'ACTIVE',
+      badgeColor:
+        journalCount === 0
+          ? 'bg-slate-100 text-[#505F76] border-slate-200'
+          : 'bg-emerald-50 text-[#006948] border-emerald-200',
     },
     {
       id: 'knowledge-graph',
       title: 'Knowledge Graph',
-      value: '0 Topics',
-      status: 'Concept graph idle · 0 nodes indexed',
+      value: `${topicsCount} Topic${topicsCount === 1 ? '' : 's'}`,
+      status:
+        topicsCount === 0
+          ? 'Concept graph idle · 0 nodes indexed'
+          : `${topicsCount} domain topic${topicsCount > 1 ? 's' : ''} mapped in graph`,
       icon: Network,
       iconBg: 'bg-[#F3EFEA]',
       iconColor: 'text-[#8D4B00]',
-      badge: 'PENDING',
-      badgeColor: 'bg-[#FFF8ED] text-[#8D4B00] border-amber-200',
+      badge: topicsCount === 0 ? 'PENDING' : 'SYNCED',
+      badgeColor:
+        topicsCount === 0
+          ? 'bg-[#FFF8ED] text-[#8D4B00] border-amber-200'
+          : 'bg-[#F0F3FF] text-[#1E293B] border-[#CCD8FF]',
     },
     {
       id: 'cognitive-stability',
       title: 'Cognitive Stability',
-      value: '0 Topics At Risk',
-      status: 'No decay detected · Baseline pristine',
+      value: `${atRiskTopics} Topic${atRiskTopics === 1 ? '' : 's'} At Risk`,
+      status:
+        atRiskTopics === 0
+          ? 'No decay detected · Baseline pristine'
+          : `${atRiskTopics} require Socratic recall reinforcement`,
       icon: ShieldCheck,
-      iconBg: 'bg-[#ECFDF5]',
-      iconColor: 'text-[#006948]',
-      badge: 'STABLE',
-      badgeColor: 'bg-emerald-50 text-[#006948] border-emerald-200',
+      iconBg: atRiskTopics > 0 ? 'bg-amber-50' : 'bg-[#ECFDF5]',
+      iconColor: atRiskTopics > 0 ? 'text-[#8D4B00]' : 'text-[#006948]',
+      badge: atRiskTopics > 0 ? 'DECAY DETECTED' : 'STABLE',
+      badgeColor:
+        atRiskTopics > 0
+          ? 'bg-[#FFF8ED] text-[#8D4B00] border-amber-200'
+          : 'bg-emerald-50 text-[#006948] border-emerald-200',
     },
   ];
 
@@ -54,7 +106,10 @@ export const ZeroStateMetricCards: React.FC = () => {
           <div
             key={card.id}
             id={`metric-card-${card.id}`}
-            className="bg-white rounded-2xl border border-[#E5E0D8] p-4 sm:p-5 shadow-xs hover:border-[#D5CFC6] hover:shadow-sm transition-all text-left flex flex-col justify-between group"
+            onClick={() => onCardClick && onCardClick(card.id)}
+            className={`bg-white rounded-2xl border border-[#E5E0D8] p-4 sm:p-5 shadow-xs hover:border-[#D5CFC6] hover:shadow-sm transition-all text-left flex flex-col justify-between group ${
+              onCardClick ? 'cursor-pointer' : ''
+            }`}
           >
             <div>
               {/* Header row with Icon and Badge */}
@@ -93,3 +148,4 @@ export const ZeroStateMetricCards: React.FC = () => {
     </div>
   );
 };
+

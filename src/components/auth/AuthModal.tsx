@@ -23,11 +23,12 @@ import {
 import { AuthErrorDetails } from '../../types';
 
 interface AuthModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen = true, onClose, onSuccess }) => {
   const {
     signInWithGoogle,
     signInWithEmail,
@@ -74,6 +75,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     try {
       await signInWithGoogle();
       handleClose();
+      if (onSuccess) onSuccess();
     } catch (err: any) {
       // The error and errorDetails are populated in AuthContext
       setAuthMethod('credentials');
@@ -133,6 +135,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         await signUpWithEmail(email, password, displayName);
       }
       handleClose();
+      if (onSuccess) onSuccess();
     } catch (err: any) {
       // AuthContext sets error and errorDetails
     } finally {

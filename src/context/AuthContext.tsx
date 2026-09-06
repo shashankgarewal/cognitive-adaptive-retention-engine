@@ -181,9 +181,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setUser(currentUser);
       if (currentUser) {
+        try {
+          localStorage.setItem(
+            'care_user_session',
+            JSON.stringify({
+              uid: currentUser.uid,
+              email: currentUser.email || '',
+              displayName: currentUser.displayName || '',
+            })
+          );
+        } catch {
+          // ignore storage access errors
+        }
         await syncProfileWithBackend(currentUser);
       } else {
         // Complete session sanitation on sign-out
+        try {
+          localStorage.removeItem('care_user_session');
+        } catch {
+          // ignore storage access errors
+        }
         setProfile(null);
       }
       setLoading(false);
@@ -446,6 +463,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[AUTH] Sign-out completed successfully');
       console.groupEnd();
       // Clean slate sanitation
+      try {
+        localStorage.removeItem('care_user_session');
+        sessionStorage.removeItem('care_last_active_route');
+      } catch {
+        // ignore
+      }
       setUser(null);
       setProfile(null);
     } catch (err: any) {

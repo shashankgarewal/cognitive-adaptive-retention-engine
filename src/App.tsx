@@ -1,11 +1,13 @@
 /**
  * CARE - Primary Application Component
- * Multi-page architecture with separate routes for all 4 primary modules:
+ * Multi-page architecture with separate routes for all primary modules:
  * - /         -> Public Landing Page
  * - /feed     -> Work Journal Feed Page (Protected)
  * - /hub      -> Retention Hub Page (Protected)
  * - /analytics-> Analytics & Decay Page (Protected)
  * - /spec     -> Architecture Spec Page (Protected)
+ * - /editor   -> Journal Writer Page (Protected)
+ * - /journal/editor -> Journal Writer Page (Protected alias)
  *
  * Strict Auth Guard: Any manually entered protected URL automatically redirects
  * unauthenticated visitors to the public landing page (/).
@@ -64,6 +66,14 @@ export default function App() {
             }
           />
           <Route
+            path="/editor"
+            element={
+              <ProtectedRoute>
+                <JournalWriterPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/journal/editor"
             element={
               <ProtectedRoute>
@@ -73,7 +83,7 @@ export default function App() {
           />
           <Route
             path="/writer"
-            element={<Navigate to="/journal/editor" replace />}
+            element={<Navigate to="/editor" replace />}
           />
 
           {/* Catch-all fallback redirects to Landing */}
@@ -83,5 +93,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-
-

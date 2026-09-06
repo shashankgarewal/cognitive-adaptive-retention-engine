@@ -4,7 +4,7 @@
  */
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, ActionCodeSettings } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, ActionCodeSettings, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { initializeFirestore, memoryLocalCache, getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -58,8 +58,13 @@ if (typeof window !== 'undefined') {
 // Initialize Firebase App singleton
 const app = !getApps().length ? initializeApp(effectiveFirebaseConfig) : getApp();
 
-// Firebase Auth instance
+// Firebase Auth instance with explicit browser local storage persistence
 export const auth = getAuth(app);
+if (typeof window !== 'undefined') {
+  setPersistence(auth, browserLocalPersistence).catch((err) => {
+    console.warn('[FIREBASE] Explicit browserLocalPersistence notice:', err);
+  });
+}
 
 // Google SSO Provider configuration
 export const googleProvider = new GoogleAuthProvider();

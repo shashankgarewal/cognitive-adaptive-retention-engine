@@ -11,6 +11,16 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
+  React.useEffect(() => {
+    if (user && location.pathname && location.pathname !== '/') {
+      try {
+        sessionStorage.setItem('care_last_active_route', location.pathname);
+      } catch {
+        // ignore
+      }
+    }
+  }, [user, location.pathname]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center font-mono text-xs text-[#006948]">
@@ -23,7 +33,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!user) {
-    // Redirect to landing page whenever not logged in, regardless of what page was manually entered
+    // Redirect to landing page whenever not logged in, preserving the attempted route in state
     return <Navigate to="/" replace state={{ from: location }} />;
   }
 
