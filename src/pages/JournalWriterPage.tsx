@@ -32,27 +32,13 @@ export const JournalWriterPage: React.FC = () => {
   const navigate = useNavigate();
 
   // Document State
-  const [title, setTitle] = useState(
-    'Refactoring Multi-Head Attention to Grouped-Query Attention (GQA)'
-  );
-  const [body, setBody] = useState(`Implemented Grouped-Query Attention (GQA-8) for our dense 7B transformer serving pipeline. 
-
-Context & Motivation:
-Standard Multi-Head Attention (MHA) creates extreme KV-cache memory pressure during long-context autoregressive decoding (8k tokens). Each layer maintained 32 key and value heads:
-$$ \\text{Memory}_{\\text{KV}} = 2 \\times B \\times L \\times H_{\\text{kv}} \\times D_{\\text{head}} \\times 2 \\text{ bytes} $$
-
-Changes Made:
-- Re-architected the projection layer to group 32 query heads into 8 key-value head groups (group size = 4).
-- Reduced KV cache memory footprint by 75% while maintaining 99.2% of downstream validation perplexity.
-- Fixed a silent broadcasting mismatch in the attention kernel when batch size > 1 under CUDA stream concurrency.
-
-AI Usage Signal:
-Used Claude 3.7 Sonnet in Cursor for generating the Triton kernel wrapper and test assertions. I manually derived the tensor shape stride mechanics to verify SRAM memory alignment.`);
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
 
   const [aiLevel, setAiLevel] = useState<AiAssistanceLevel>('prompt_driven');
   const [aiTool, setAiTool] = useState('Cursor / Claude 3.7 Sonnet');
   const [isSaving, setIsSaving] = useState(false);
-  const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(true);
+  const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
   const [persistAiThread, setPersistAiThread] = useState(true);
   const [isSynthesizingTitle, setIsSynthesizingTitle] = useState(false);
   const [isPolishing, setIsPolishing] = useState(false);

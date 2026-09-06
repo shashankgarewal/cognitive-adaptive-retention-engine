@@ -42,7 +42,7 @@ export const CoThinkingDrawer: React.FC<CoThinkingDrawerProps> = ({
   const [aiChatInput, setAiChatInput] = useState('');
   const [isAiResponding, setIsAiResponding] = useState(false);
   const [isCheckpointOpen, setIsCheckpointOpen] = useState(false);
-  const [modelLatency, setModelLatency] = useState('210ms');
+  const [modelLatency, setModelLatency] = useState<string>('120ms');
 
   const [dynamicQuickPrompts, setDynamicQuickPrompts] = useState<string[]>([]);
 
@@ -66,7 +66,10 @@ export const CoThinkingDrawer: React.FC<CoThinkingDrawerProps> = ({
     if (activeConcepts.length > 0) {
       return `Focus: ${activeConcepts.map((c) => c.canonicalName).join(', ')}`;
     }
-    return `Focus: ${title || 'Data Science Technical Invariants'}`;
+    if (title.trim()) {
+      return `Focus: ${title.trim()}`;
+    }
+    return 'Focus: Waiting for document notes...';
   }, [activeConcepts, title]);
 
   // Sync initial dynamic AI analysis whenever document or drawer state changes

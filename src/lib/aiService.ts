@@ -45,7 +45,14 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
  * equations, headings, and acronyms.
  */
 export function extractConceptsLocally(title: string, body: string): ConceptExtractionResult {
-  const combined = `${title}\n${body}`;
+  const combined = `${title}\n${body}`.trim();
+  if (!combined) {
+    return {
+      concepts: [],
+      synthesizedTitle: '',
+      summary: '',
+    };
+  }
   const conceptsMap = new Map<string, ExtractedConcept>();
 
   // 1. Math Formula Extraction
@@ -132,15 +139,28 @@ export function extractConceptsLocally(title: string, body: string): ConceptExtr
 
   // 4. Fallback if no specific match
   if (conceptsMap.size === 0) {
-    const cleanTitle = title.trim() || 'Data Science Workflow';
-    const topicId = cleanTitle.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 32) || 'ds_workflow';
-    conceptsMap.set(topicId, {
-      topicId,
-      canonicalName: cleanTitle,
-      category: 'Classical ML',
-      importanceScore: 0.75,
-      contextSummary: 'Primary concept derived from document title.',
-    });
+    const cleanTitle = title.trim();
+    if (cleanTitle) {
+      const topicId = cleanTitle.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 32) || 'ds_note';
+      conceptsMap.set(topicId, {
+        topicId,
+        canonicalName: cleanTitle,
+        category: 'Classical ML',
+        importanceScore: 0.75,
+        contextSummary: 'Primary concept derived from document title.',
+      });
+    } else if (body.trim()) {
+      const firstLine = body.trim().split('\n')[0].slice(0, 35).trim();
+      if (firstLine) {
+        conceptsMap.set('notes_concept', {
+          topicId: 'notes_concept',
+          canonicalName: firstLine,
+          category: 'Classical ML',
+          importanceScore: 0.70,
+          contextSummary: 'Derived from note content.',
+        });
+      }
+    }
   }
 
   const concepts = Array.from(conceptsMap.values()).slice(0, 5);
@@ -150,8 +170,10 @@ export function extractConceptsLocally(title: string, body: string): ConceptExtr
   if (!title.trim() || title.toLowerCase().includes('untitled')) {
     if (concepts.length > 0) {
       synthesizedTitle = `Analysis & Implementation of ${concepts[0].canonicalName}`;
-    } else {
+    } else if (body.trim()) {
       synthesizedTitle = 'Architectural Synthesis & Data Science Notes';
+    } else {
+      synthesizedTitle = '';
     }
   }
 
@@ -172,7 +194,7 @@ export function generateCoThinkingFallback(
   message?: string
 ): CoThinkingChatResult {
   const extraction = extractConceptsLocally(title, body);
-  const primaryConcept = extraction.concepts[0]?.canonicalName || title || 'your technical implementation';
+  const primaryConcept = extraction.concepts[0]?.canonicalName || title || 'your technical notes';
   const secondConcept = extraction.concepts[1]?.canonicalName || 'the underlying mathematical formulation';
 
   const userQuery = (message || '').trim().toLowerCase();
@@ -181,7 +203,10 @@ export function generateCoThinkingFallback(
   let mathBlock: string | undefined = undefined;
   let recommendation: string | undefined = undefined;
 
-  if (!message || message === 'init') {
+  if (!title.trim() && !body.trim()) {
+    assistantMessage = `Your canvas is currently empty. Write your engineering decisions, model architectures, or research notes, and I'll analyze technical invariants and probe for gaps.`;
+    recommendation = `You can also load a template from the top-right dropdown menu to explore sample technical notes.`;
+  } else if (!message || message === 'init') {
     assistantMessage = `I've analyzed your notes on **${primaryConcept}**. You're documenting the architectural implementation, performance characteristics, and key trade-offs involving ${secondConcept}. Let's probe the cognitive invariants to ensure long-term retention.`;
     recommendation = `Verify that your code and unit tests explicitly handle boundary conditions when scaling batch sizes or input distributions.`;
   } else if (userQuery.includes('gap') || userQuery.includes('blindspot') || userQuery.includes('coach')) {
@@ -252,6 +277,7 @@ export const aiService = {
     message?: string;
     history?: Array<{ role: 'user' | 'assistant'; message: string }>;
   }): Promise<CoThinkingChatResult> {
+    const startTime = performance.now();
     try {
       const headers = await getAuthHeaders();
       const res = await fetch('/api/ai/cothinking-chat', {
@@ -262,17 +288,18 @@ export const aiService = {
 
       if (res.ok) {
         const data = await res.json();
+        const elapsed = Math.round(performance.now() - startTime);
         if (data.assistantMessage) {
           return {
             assistantMessage: data.assistantMessage,
             mathBlock: data.mathBlock || undefined,
             recommendation: data.recommendation || undefined,
             dynamicQuickPrompts: data.dynamicQuickPrompts || [
-              `🎯 Coach Me on Gaps in ${params.title.slice(0, 20)}`,
+              `🎯 Coach Me on Gaps in ${params.title.slice(0, 20) || 'Notes'}`,
               '📋 Summarize Key Concepts',
               '🧠 Probe Edge Cases',
             ],
-            modelLatency: data.modelLatency || '320ms',
+            modelLatency: data.modelLatency || `${elapsed}ms`,
           };
         }
       }
@@ -280,6 +307,9 @@ export const aiService = {
       console.warn('[AI SERVICE] Remote Co-Thinking partner chat fallback:', e);
     }
 
-    return generateCoThinkingFallback(params.title, params.body, params.message);
+    const elapsedFallback = Math.round(performance.now() - startTime);
+    const fallback = generateCoThinkingFallback(params.title, params.body, params.message);
+    fallback.modelLatency = `${Math.max(16, elapsedFallback)}ms`;
+    return fallback;
   },
 };

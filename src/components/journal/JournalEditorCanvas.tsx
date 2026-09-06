@@ -98,14 +98,20 @@ export const JournalEditorCanvas: React.FC<JournalEditorCanvasProps> = ({
             <Tag className="w-3 h-3 text-[#006948]" />
             Detected Concepts:
           </span>
-          {extractedConceptsList.map((concept, idx) => (
-            <span
-              key={idx}
-              className="inline-flex items-center px-2 py-0.5 rounded-full bg-white border border-[#E5E0D8] text-[11px] font-mono font-medium text-[#111C2D] hover:border-[#006948] hover:text-[#006948] transition-colors cursor-pointer"
-            >
-              #{concept}
+          {extractedConceptsList.length > 0 ? (
+            extractedConceptsList.map((concept, idx) => (
+              <span
+                key={idx}
+                className="inline-flex items-center px-2 py-0.5 rounded-full bg-white border border-[#E5E0D8] text-[11px] font-mono font-medium text-[#111C2D] hover:border-[#006948] hover:text-[#006948] transition-colors cursor-pointer"
+              >
+                #{concept}
+              </span>
+            ))
+          ) : (
+            <span className="text-[11px] font-mono text-slate-400 italic">
+              None detected (Start typing to extract concepts...)
             </span>
-          ))}
+          )}
         </div>
 
         <div className="text-[11px] font-mono text-emerald-800 font-medium flex items-center gap-1.5">
