@@ -6,7 +6,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, ActionCodeSettings, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { initializeFirestore, memoryLocalCache, getFirestore } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import rawConfig from '../../firebase-applet-config.json';
 
 // Standard fallback app URL when window.location.origin is unavailable
 export const FALLBACK_APP_URL = 'https://ais-dev-dy4kmcdqvfvykhx4s4hmxo-63677282004.asia-southeast1.run.app';
@@ -36,12 +36,25 @@ export function getActionCodeSettings(path = ''): ActionCodeSettings {
   };
 }
 
-// Use authoritative configuration from provisioned firebase-applet-config.json
-const gcpProjectId = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GCP_PROJECT_ID) || firebaseConfig.projectId;
+// Use authoritative configuration from provisioned firebase-applet-config.json or environment variables
+const env = (typeof import.meta !== 'undefined' ? (import.meta as any).env : {}) || {};
+const cfg = (rawConfig as any) || {};
+
+const gcpProjectId = env.VITE_GCP_PROJECT_ID || env.VITE_FIREBASE_PROJECT_ID || cfg.projectId || 'care-recall';
+const apiKey = env.VITE_FIREBASE_API_KEY || cfg.apiKey || '';
+const authDomain = env.VITE_FIREBASE_AUTH_DOMAIN || cfg.authDomain || `${gcpProjectId}.firebaseapp.com`;
+const storageBucket = env.VITE_FIREBASE_STORAGE_BUCKET || cfg.storageBucket || `${gcpProjectId}.appspot.com`;
+const messagingSenderId = env.VITE_FIREBASE_MESSAGING_SENDER_ID || cfg.messagingSenderId || '';
+const appId = env.VITE_FIREBASE_APP_ID || cfg.appId || '';
+
 const effectiveFirebaseConfig = {
-  ...firebaseConfig,
+  apiKey,
+  authDomain,
   projectId: gcpProjectId,
-  authDomain: firebaseConfig.authDomain || `${gcpProjectId}.firebaseapp.com`,
+  storageBucket,
+  messagingSenderId,
+  appId,
+  firestoreDatabaseId: cfg.firestoreDatabaseId || env.VITE_FIRESTORE_DATABASE_ID || '(default)',
 };
 
 // Diagnostic logging for Firebase initialization
@@ -49,7 +62,7 @@ if (typeof window !== 'undefined') {
   console.groupCollapsed('[FIREBASE] Client SDK Initialization');
   console.log('Project ID:', effectiveFirebaseConfig.projectId);
   console.log('Auth Domain:', effectiveFirebaseConfig.authDomain);
-  console.log('Firestore Database:', firebaseConfig.firestoreDatabaseId || '(default)');
+  console.log('Firestore Database:', cfg.firestoreDatabaseId || '(default)');
   console.log('Current Window Origin:', window.location.origin);
   console.log('Current Hostname:', window.location.hostname);
   console.groupEnd();
@@ -75,8 +88,8 @@ googleProvider.setCustomParameters({
 // Cloud Firestore instance bound to the app's provisioned databaseId or default.
 // Disabled offline persistence during debugging (via memoryLocalCache)
 // so failed network writes error out immediately instead of silently storing locally.
-const databaseId = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
-  ? firebaseConfig.firestoreDatabaseId
+const databaseId = cfg.firestoreDatabaseId && cfg.firestoreDatabaseId !== '(default)'
+  ? cfg.firestoreDatabaseId
   : undefined;
 
 let firestoreInstance;

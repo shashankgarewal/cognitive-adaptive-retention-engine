@@ -1,0 +1,61 @@
+name: Build and Deploy to Cloud Run
+
+on:
+  push:
+    branches: [ main, master ]
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  SERVICE_NAME: recall-care-app
+  GAR_REPO: care-docker-repo
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Ensure Artifact Registry Repository Exists
+      run: |
+        gcloud artifacts repositories describe ${{ env.GAR_REPO }} \
+          --location=${{ env.REGION }} \
+          --project=${{ env.PROJECT_ID }} || \
+        gcloud artifacts repositories create ${{ env.GAR_REPO }} \
+          --repository-format=docker \
+          --location=${{ env.REGION }} \
+          --project=${{ env.PROJECT_ID }} \
+          --description="Docker repository for CARE app"
+
+    - name: Configure Docker to Artifact Registry
+      run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+        build-args: |
+          VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+          VITE_FIREBASE_AUTH_DOMAIN=${{ vars.VITE_FIREBASE_AUTH_DOMAIN || secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_APP_ID=${{ vars.VITE_FIREBASE_APP_ID || secrets.VITE_FIREBASE_APP_ID }}
+
+    - name: Deploy to Cloud Run
+      uses: google-github-actions/deploy-cloudrun@v2
+      with:
+        service: ${{ env.SERVICE_NAME }}
+        image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+        region: ${{ env.REGION }}
+        flags: '--allow-unauthenticated --port=3000'
