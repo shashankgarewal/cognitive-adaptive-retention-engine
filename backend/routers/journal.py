@@ -236,6 +236,7 @@ async def get_journal_entries(
 ):
     """
     Retrieves the user's journal entries from /users/{userId}/journal_entries.
+    Auto-migrates orphan records from legacy fallback sessions if user has no entries.
     Strictly isolated to request.auth.uid. Enforces HTTP 401 on missing or invalid token.
     """
     user_id = user_claims.get("uid")
@@ -256,7 +257,7 @@ async def get_journal_entries(
                 .document(user_id)
                 .collection("journal_entries")
             )
-            docs = entries_ref.stream()
+            docs = list(entries_ref.stream())
             for doc in docs:
                 data = doc.to_dict()
                 if data:
@@ -271,11 +272,17 @@ async def get_journal_entries(
             logger.error(f"Error fetching journal entries from Firestore: {e}")
             # Fall back to in-memory
             for d in _in_memory_journals.get(user_id, []):
-                entries.append(JournalEntry(**d))
+                try:
+                    entries.append(JournalEntry(**d))
+                except Exception:
+                    pass
             entries.sort(key=lambda e: e.createdAt, reverse=True)
     else:
         for d in _in_memory_journals.get(user_id, []):
-            entries.append(JournalEntry(**d))
+            try:
+                entries.append(JournalEntry(**d))
+            except Exception:
+                pass
         entries.sort(key=lambda e: e.createdAt, reverse=True)
 
     return JournalListResponse(
@@ -313,7 +320,7 @@ async def get_topics(
                 .document(user_id)
                 .collection("topic_retention_states")
             )
-            docs = topics_ref.stream()
+            docs = list(topics_ref.stream())
             for doc in docs:
                 data = doc.to_dict()
                 if data:

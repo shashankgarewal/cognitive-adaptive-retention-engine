@@ -72,19 +72,26 @@ export const RecallSessionModal: React.FC<RecallSessionModalProps> = ({
 
     hasInitializedRef.current = true;
     let isMounted = true;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     async function initFirstTurn() {
       setIsSending(true);
       try {
-        const res = await api.sendRecallMessage(session.sessionId);
+        const res = await api.sendRecallMessage(session.sessionId, undefined, controller.signal);
         if (isMounted) {
           setSession(res.session);
         }
       } catch (err: any) {
         if (isMounted) {
-          setErrorMessage(err.message || 'Failed to initialize active recall prompt.');
+          const isTimeout = err.name === 'AbortError' || err.message?.toLowerCase().includes('timeout') || err.message?.toLowerCase().includes('abort');
+          const fallbackMsg = isTimeout
+            ? 'Peer Knowledge Partner connection timed out. Retry or click Complete & Score'
+            : (err.message || 'Peer Knowledge Partner connection timed out. Retry or click Complete & Score');
+          setErrorMessage(fallbackMsg);
         }
       } finally {
+        clearTimeout(timeoutId);
         if (isMounted) {
           setIsSending(false);
         }
@@ -95,6 +102,8 @@ export const RecallSessionModal: React.FC<RecallSessionModalProps> = ({
 
     return () => {
       isMounted = false;
+      clearTimeout(timeoutId);
+      controller.abort();
     };
   }, [session.sessionId, session.turns.length, session.status]);
 
@@ -135,12 +144,20 @@ export const RecallSessionModal: React.FC<RecallSessionModalProps> = ({
 
     setIsSending(true);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
-      const res = await api.sendRecallMessage(session.sessionId, cleanText);
+      const res = await api.sendRecallMessage(session.sessionId, cleanText, controller.signal);
       setSession(res.session);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to send message to Peer Knowledge Partner.');
+      const isTimeout = err.name === 'AbortError' || err.message?.toLowerCase().includes('timeout') || err.message?.toLowerCase().includes('abort');
+      const fallbackMsg = isTimeout
+        ? 'Peer Knowledge Partner connection timed out. Retry or click Complete & Score'
+        : (err.message || 'Peer Knowledge Partner connection timed out. Retry or click Complete & Score');
+      setErrorMessage(fallbackMsg);
     } finally {
+      clearTimeout(timeoutId);
       setIsSending(false);
       setTimeout(() => textareaRef.current?.focus(), 100);
     }
@@ -158,15 +175,23 @@ export const RecallSessionModal: React.FC<RecallSessionModalProps> = ({
     setIsEvaluating(true);
     setErrorMessage(null);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
-      const res = await api.evaluateRecallSession(session.sessionId);
+      const res = await api.evaluateRecallSession(session.sessionId, controller.signal);
       setSession(res.session);
       if (res.updatedTopic) {
         setCompletedTopic(res.updatedTopic);
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to evaluate active recall session.');
+      const isTimeout = err.name === 'AbortError' || err.message?.toLowerCase().includes('timeout') || err.message?.toLowerCase().includes('abort');
+      const fallbackMsg = isTimeout
+        ? 'Peer Knowledge Partner connection timed out. Retry or click Complete & Score'
+        : (err.message || 'Failed to evaluate active recall session.');
+      setErrorMessage(fallbackMsg);
     } finally {
+      clearTimeout(timeoutId);
       setIsEvaluating(false);
     }
   };
@@ -367,11 +392,24 @@ export const RecallSessionModal: React.FC<RecallSessionModalProps> = ({
                 </div>
               )}
 
-              {/* Error Notification */}
+              {/* Error / Timeout Notification */}
               {errorMessage && (
-                <div className="p-3 bg-rose-950/60 border border-rose-800 rounded-xl text-rose-300 text-xs flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <div className="flex-1">{errorMessage}</div>
+                <div className="p-3.5 bg-amber-950/70 border border-amber-800/80 rounded-xl text-amber-200 text-xs flex items-start gap-2.5 shadow-sm animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="flex-1 leading-relaxed">
+                    <p className="font-semibold text-amber-100">{errorMessage}</p>
+                    <p className="text-[11px] text-amber-300/80 mt-0.5">
+                      You can send another prompt, retry your technical explanation, or conclude the session with <strong>Complete &amp; Score</strong>.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setErrorMessage(null)}
+                    className="p-1 text-amber-400 hover:text-amber-200 hover:bg-amber-900/50 rounded transition-colors shrink-0"
+                    title="Dismiss"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               )}
 

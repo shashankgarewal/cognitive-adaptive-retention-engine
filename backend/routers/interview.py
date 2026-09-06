@@ -168,14 +168,7 @@ async def send_interview_message(
             user_message=clean_user_message,
         )
     except Exception as e:
-        logger.error(f"Error generating interview turn: {e}")
-        err_str = str(e).lower()
-        if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Vertex AI quota exceeded or rate limit reached. Please wait a moment and try again.",
-            )
-        # Fallback to local turn generator
+        logger.warning(f"Vertex AI turn generation encountered exception ({e}); providing structured fallback response.")
         fallback_msg = adk_interviewer._fallback_active_recall_turn(topic, session, clean_user_message)
         assistant_turn = ChatTurn(
             role="assistant",
@@ -254,13 +247,7 @@ async def evaluate_interview_session(
     try:
         evaluation = await adk_interviewer.evaluate_session(topic=topic, session=session)
     except Exception as e:
-        logger.error(f"Error evaluating interview session: {e}")
-        err_str = str(e).lower()
-        if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Vertex AI quota exceeded or rate limit reached during evaluation. Please wait a moment and retry.",
-            )
+        logger.warning(f"Vertex AI evaluation encountered exception ({e}); providing structured fallback scorecard.")
         # Fallback to local scorecard generator
         evaluation = adk_interviewer._fallback_evaluate_session(topic, session)
 

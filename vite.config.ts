@@ -230,17 +230,19 @@ function apiDevPlugin(): Plugin {
           }
 
           if (req.url === '/api/journal/entries' && req.method === 'GET') {
+            const journals = (global as any).__care_journals_by_user[authUser.uid] || [];
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({
               status: 'ok',
-              entries: userJournals,
-              total: userJournals.length,
+              entries: journals,
+              total: journals.length,
             }));
             return;
           }
 
           if (req.url === '/api/topics' && req.method === 'GET') {
-            const topics = Object.values(userTopics);
+            const userTopicsMap = (global as any).__care_topics_by_user[authUser.uid] || {};
+            const topics = Object.values(userTopicsMap);
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({
               status: 'ok',

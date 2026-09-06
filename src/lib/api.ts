@@ -184,12 +184,17 @@ export const api = {
     return res.json();
   },
 
-  async sendRecallMessage(sessionId: string, message?: string): Promise<RecallSessionMessageResponse> {
+  async sendRecallMessage(
+    sessionId: string,
+    message?: string,
+    signal?: AbortSignal
+  ): Promise<RecallSessionMessageResponse> {
     const headers = await getAuthHeaders();
     const res = await fetch(`/api/recall/sessions/${sessionId}/message`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ message }),
+      signal,
     });
 
     if (!res.ok) {
@@ -200,11 +205,15 @@ export const api = {
     return res.json();
   },
 
-  async evaluateRecallSession(sessionId: string): Promise<RecallSessionEvaluateResponse> {
+  async evaluateRecallSession(
+    sessionId: string,
+    signal?: AbortSignal
+  ): Promise<RecallSessionEvaluateResponse> {
     const headers = await getAuthHeaders();
     const res = await fetch(`/api/recall/sessions/${sessionId}/evaluate`, {
       method: 'POST',
       headers,
+      signal,
     });
 
     if (!res.ok) {

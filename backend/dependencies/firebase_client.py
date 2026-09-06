@@ -17,16 +17,17 @@ def get_firebase_app():
     if _firebase_app is None:
         try:
             # Check for service account json or use default application credentials
+            target_project_id = settings.GCP_PROJECT_ID or "care-recall"
             cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
             if cred_path and os.path.exists(cred_path):
                 cred = credentials.Certificate(cred_path)
                 _firebase_app = firebase_admin.initialize_app(cred, {
-                    "projectId": settings.GCP_PROJECT_ID
+                    "projectId": target_project_id
                 })
             else:
                 # Default application credentials (Cloud Run / Google Cloud environment)
                 _firebase_app = firebase_admin.initialize_app(options={
-                    "projectId": settings.GCP_PROJECT_ID
+                    "projectId": target_project_id
                 })
         except ValueError:
             # App already initialized

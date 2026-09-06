@@ -8,8 +8,16 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
+// Standardize Firebase project config to GCP_PROJECT_ID defaulting strictly to 'care-recall'
+const gcpProjectId = import.meta.env.VITE_GCP_PROJECT_ID || 'care-recall';
+const effectiveFirebaseConfig = {
+  ...firebaseConfig,
+  projectId: gcpProjectId,
+  authDomain: `${gcpProjectId}.firebaseapp.com`,
+};
+
 // Initialize Firebase App singleton
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const app = !getApps().length ? initializeApp(effectiveFirebaseConfig) : getApp();
 
 // Firebase Auth instance
 export const auth = getAuth(app);
