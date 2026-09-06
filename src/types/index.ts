@@ -80,6 +80,9 @@ export interface TopicRetentionState {
   currentPriorityScore: number;
   decayFactor: number;
   explanationReason?: string;
+  fragileSubconcept?: string;
+  cognitiveLossRisk?: string;
+  mathematicalParameters?: string;
 }
 
 export interface ChatTurn {

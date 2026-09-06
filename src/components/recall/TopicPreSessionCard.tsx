@@ -20,9 +20,11 @@ import {
   ArrowRight,
   Calculator,
   ShieldCheck,
+  AlertTriangle,
 } from 'lucide-react';
 import { TopicRetentionState, RecallSession } from '../../types';
 import { api } from '../../lib/api';
+import { getDescriptiveFragileSubconcept } from '../../lib/retentionFragility';
 
 interface TopicPreSessionCardProps {
   topic: TopicRetentionState;
@@ -55,6 +57,15 @@ export const TopicPreSessionCard: React.FC<TopicPreSessionCardProps> = ({
 
   const rawPriority = (0.40 * T_decay + 0.35 * A_signal + 0.25 * H_weakness) * M_freq;
   const priorityScore = Math.round(Math.min(100, Math.max(0, rawPriority * 100)) * 10) / 10;
+
+  // Resolve descriptive fragile subconcept and cognitive loss risk
+  const fragility = getDescriptiveFragileSubconcept(
+    topic.canonicalName,
+    topic.category,
+    topic.effectiveAiAssistanceWeight,
+    topic.lastRecallScore,
+    topic.fragileSubconcept || topic.explanationReason
+  );
 
   // Determine dominant rationale badge
   let rationaleBadge = 'Stable Baseline';
@@ -280,9 +291,27 @@ export const TopicPreSessionCard: React.FC<TopicPreSessionCardProps> = ({
                   </div>
                 </div>
 
+                {/* Identified Fragile Subconcept & Cognitive Loss Risk */}
+                <div className="p-3.5 bg-amber-950/25 rounded-xl border border-amber-800/40 text-xs">
+                  <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold text-amber-400 uppercase tracking-wider mb-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    <span>Cognitive Fragility Diagnosis</span>
+                  </div>
+                  <div className="space-y-1.5 text-stone-300">
+                    <p>
+                      <span className="font-semibold text-amber-300 font-mono text-[11px] uppercase tracking-wide">Fragile Nuance: </span>
+                      <span>{fragility.fragileSubconcept}</span>
+                    </p>
+                    <p>
+                      <span className="font-semibold text-rose-300 font-mono text-[11px] uppercase tracking-wide">Cognitive Loss Risk: </span>
+                      <span className="text-stone-300">{fragility.cognitiveLossRisk}</span>
+                    </p>
+                  </div>
+                </div>
+
                 {/* Explicit Formula */}
                 <div className="p-3 bg-stone-950 rounded-xl border border-stone-850 font-mono text-[11px] text-stone-400 leading-relaxed">
-                  <div className="text-emerald-400 font-semibold mb-1">CARE Retention Formula:</div>
+                  <div className="text-emerald-400 font-semibold mb-1">CARE Retention Formula Parameters:</div>
                   <code>
                     Priority(t) = [0.40·{T_decay.toFixed(2)} + 0.35·{A_signal.toFixed(2)} + 0.25·{H_weakness.toFixed(2)}] × {M_freq.toFixed(2)} = {priorityScore.toFixed(1)} / 100
                   </code>

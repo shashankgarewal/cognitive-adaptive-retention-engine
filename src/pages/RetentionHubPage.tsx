@@ -8,6 +8,7 @@ import {
   JournalEntry,
   ExtractedConcept,
 } from '../types';
+import { getDescriptiveFragileSubconcept } from '../lib/retentionFragility';
 import { ZeroStateHeader } from '../components/dashboard/ZeroStateHeader';
 import { ZeroStateBlueprintPanel } from '../components/dashboard/ZeroStateBlueprintPanel';
 import { TopicPreSessionCard } from '../components/recall/TopicPreSessionCard';
@@ -44,6 +45,8 @@ interface ConceptCardData {
   statusColor: 'critical' | 'moderate' | 'stable';
   nuanceGapTitle: string;
   nuanceGapDetail: string;
+  fragileSubconcept?: string;
+  cognitiveLossRisk?: string;
   aiExposure: string;
   aiExposureRaw: number;
   lastExposure: string;
@@ -61,7 +64,9 @@ const DEFAULT_CONCEPT_CARDS: ConceptCardData[] = [
     statusLabel: 'HIGHEST PRIORITY',
     statusColor: 'critical',
     nuanceGapTitle: '⚠️ FRAGILE SUBCONCEPTS IDENTIFIED',
-    nuanceGapDetail: 'Softmax scaling factor (√d_k) variance & Q,K,V projection dimensionality drift detected.',
+    fragileSubconcept: 'Softmax scaling factor (1/√d_k) variance normalization & Q,K,V projection dimension bounds.',
+    cognitiveLossRisk: 'Losing first-principles intuition for tensor broadcasting invariants, attention normalization, and numerical underflow prevention when delegating code to Copilot.',
+    nuanceGapDetail: 'Softmax scaling factor (1/√d_k) variance & Q,K,V projection dimension bounds. Risk: Losing first-principles intuition for tensor broadcasting invariants and numerical underflow safeguards.',
     aiExposure: '85% Copilot / Claude',
     aiExposureRaw: 85,
     lastExposure: '2 days ago (3 sessions)',
@@ -77,7 +82,9 @@ const DEFAULT_CONCEPT_CARDS: ConceptCardData[] = [
     statusLabel: 'MODERATE DECAY',
     statusColor: 'moderate',
     nuanceGapTitle: 'SUBCONCEPT NUANCE GAP',
-    nuanceGapDetail: 'Distinction between jsonb_ops and jsonb_path_ops operators for inverted index storage trade-offs.',
+    fragileSubconcept: 'Distinction between jsonb_ops and jsonb_path_ops inverted index storage trade-offs.',
+    cognitiveLossRisk: 'Overlooking index amplification bloat and queries silently falling back to full table sequential heap scans.',
+    nuanceGapDetail: 'Distinction between jsonb_ops and jsonb_path_ops inverted index storage trade-offs. Risk: Overlooking index amplification bloat and queries falling back to sequential scans.',
     aiExposure: '62% Copilot',
     aiExposureRaw: 62,
     lastExposure: '4 days ago (2 sessions)',
@@ -93,7 +100,9 @@ const DEFAULT_CONCEPT_CARDS: ConceptCardData[] = [
     statusLabel: 'STABLE COGNITIVE GRASP',
     statusColor: 'stable',
     nuanceGapTitle: '✓ REINFORCED MENTAL MODEL',
-    nuanceGapDetail: 'Strong retention of Write-Through vs. Cache-Aside lease token concurrency & TTL dogpiling locks.',
+    fragileSubconcept: 'Write-Through vs Cache-Aside lease token concurrency & TTL dogpiling locks.',
+    cognitiveLossRisk: 'Losing edge-case intuition for cache stampede thundering herds and split-brain inconsistency during network partitions.',
+    nuanceGapDetail: 'Strong retention of Write-Through vs. Cache-Aside lease token concurrency & TTL dogpiling locks. Low cognitive decay risk.',
     aiExposure: '28% Manual Code',
     aiExposureRaw: 28,
     lastExposure: 'Yesterday (5 sessions)',
@@ -109,7 +118,9 @@ const DEFAULT_CONCEPT_CARDS: ConceptCardData[] = [
     statusLabel: 'DECAY IMMINENT',
     statusColor: 'critical',
     nuanceGapTitle: 'MEMORY BOUNDARY DEGRADATION',
-    nuanceGapDetail: 'SRAM tiling block size computation and IO-awareness kernel fusion rationale need reinforcement.',
+    fragileSubconcept: 'SRAM tiling block size computation, IO-awareness roofline bounds, and kernel fusion pass rationale.',
+    cognitiveLossRisk: 'Forgetting GPU memory hierarchy bottlenecks, memory-bound vs compute-bound roofline limits, and HBM memory transfer overhead under automated kernel generation.',
+    nuanceGapDetail: 'SRAM tiling block size computation and IO-awareness kernel fusion rationale. Risk: Forgetting GPU memory hierarchy bottlenecks and HBM-to-SRAM roofline limits.',
     aiExposure: '78% Claude Opus',
     aiExposureRaw: 78,
     lastExposure: '5 days ago (1 session)',
@@ -220,6 +231,16 @@ export const RetentionHubPage: React.FC = () => {
         const score = t.lastRecallScore ? Math.round(t.lastRecallScore) : Math.max(10, Math.round((1 - t.currentPriorityScore) * 100));
         const isCritical = score < 60;
         const isModerate = score >= 60 && score < 75;
+
+        // Generate descriptive fragile subconcept analysis
+        const fragility = getDescriptiveFragileSubconcept(
+          t.canonicalName,
+          t.category,
+          t.effectiveAiAssistanceWeight,
+          score,
+          t.fragileSubconcept || t.explanationReason
+        );
+
         return {
           id: t.topicId,
           title: t.canonicalName,
@@ -229,7 +250,9 @@ export const RetentionHubPage: React.FC = () => {
           statusLabel: isCritical ? 'DECAY IMMINENT' : isModerate ? 'MODERATE DECAY' : 'STABLE COGNITIVE GRASP',
           statusColor: isCritical ? 'critical' : isModerate ? 'moderate' : 'stable',
           nuanceGapTitle: isCritical ? '⚠️ FRAGILE SUBCONCEPTS' : isModerate ? 'SUBCONCEPT NUANCE GAP' : '✓ REINFORCED MENTAL MODEL',
-          nuanceGapDetail: t.explanationReason || `Category: ${t.category} • Journal Occurrences: ${t.journalOccurrences}`,
+          nuanceGapDetail: fragility.fullDescription,
+          fragileSubconcept: fragility.fragileSubconcept,
+          cognitiveLossRisk: fragility.cognitiveLossRisk,
           aiExposure: `${Math.round(t.effectiveAiAssistanceWeight * 100)}% AI Assistance`,
           aiExposureRaw: Math.round(t.effectiveAiAssistanceWeight * 100),
           lastExposure: t.lastLoggedAt ? new Date(t.lastLoggedAt).toLocaleDateString() : 'Recently active',
@@ -771,18 +794,32 @@ export const RetentionHubPage: React.FC = () => {
 
                     {/* Nuance gap alert */}
                     <div
-                      className={`mt-3 p-2.5 rounded-lg border text-xs font-sans leading-relaxed ${
+                      className={`mt-3 p-3 rounded-lg border text-xs font-sans leading-relaxed ${
                         isCritical
-                          ? 'bg-[#FFF8ED] border-amber-200 text-amber-900'
+                          ? 'bg-[#FFF8ED] border-amber-200 text-amber-950'
                           : isModerate
-                          ? 'bg-[#FAF8F5] border-[#E5E0D8] text-[#3D4A42]'
+                          ? 'bg-[#FAF8F5] border-[#E5E0D8] text-[#243028]'
                           : 'bg-[#ECFDF5] border-emerald-200 text-emerald-950'
                       }`}
                     >
-                      <strong className="font-mono text-[11px] font-bold block mb-0.5">
-                        {card.nuanceGapTitle}
-                      </strong>
-                      {card.nuanceGapDetail}
+                      <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold mb-1.5">
+                        <AlertTriangle className={`w-3.5 h-3.5 shrink-0 ${isCritical ? 'text-amber-600' : isModerate ? 'text-amber-600' : 'text-emerald-600'}`} />
+                        <span>{card.nuanceGapTitle}</span>
+                      </div>
+                      {card.fragileSubconcept && card.cognitiveLossRisk ? (
+                        <div className="space-y-1.5">
+                          <p>
+                            <span className="font-semibold font-mono text-[11px] uppercase tracking-wider text-stone-700">Fragile: </span>
+                            <span>{card.fragileSubconcept}</span>
+                          </p>
+                          <p>
+                            <span className="font-semibold font-mono text-[11px] uppercase tracking-wider text-rose-800">Risk: </span>
+                            <span>{card.cognitiveLossRisk}</span>
+                          </p>
+                        </div>
+                      ) : (
+                        <p>{card.nuanceGapDetail}</p>
+                      )}
                     </div>
 
                     {/* Telemetry Specs */}
@@ -867,7 +904,9 @@ export const RetentionHubPage: React.FC = () => {
                       <tr key={c.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3.5 px-4">
                           <div className="font-semibold text-[#111C2D] font-sans">{c.title}</div>
-                          <div className="text-[11px] font-mono text-slate-400">{c.nuanceGapDetail.slice(0, 75)}...</div>
+                          <div className="text-[11px] font-mono text-slate-500 mt-0.5 line-clamp-2 max-w-md">
+                            {c.fragileSubconcept ? `Nuance: ${c.fragileSubconcept} • Risk: ${c.cognitiveLossRisk}` : c.nuanceGapDetail}
+                          </div>
                         </td>
                         <td className="py-3.5 px-4 font-mono font-bold text-[#8D4B00]">
                           {100 - c.aiExposureRaw}% ({c.aiExposureRaw}% AI Gen)

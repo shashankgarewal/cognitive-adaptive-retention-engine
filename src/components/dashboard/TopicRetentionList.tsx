@@ -17,6 +17,7 @@ import {
   SlidersHorizontal,
   Cpu,
   Search,
+  AlertTriangle,
 } from 'lucide-react';
 import { TopicRetentionState } from '../../types';
 
@@ -226,11 +227,23 @@ export const TopicRetentionList: React.FC<TopicRetentionListProps> = ({
                 </div>
               </div>
 
-              {/* Heuristic Explanation / Formula breakdown */}
-              {topic.explanationReason && (
-                <div className="pt-2 border-t border-stone-800/60 flex items-center gap-2 text-[11px] font-mono text-stone-400">
-                  <Info className="w-3 h-3 text-stone-500 shrink-0" />
-                  <span className="truncate">Formula: {topic.explanationReason}</span>
+              {/* Heuristic Fragility & Loss Risk */}
+              {(topic.fragileSubconcept || topic.explanationReason) && (
+                <div className="pt-2 border-t border-stone-800/60 flex items-start gap-2 text-[11px] font-mono text-stone-400">
+                  <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="leading-snug min-w-0">
+                    <span className="text-amber-400 font-semibold">Fragile Nuance: </span>
+                    <span className="text-stone-300">
+                      {topic.fragileSubconcept ||
+                        (topic.explanationReason?.startsWith('T(t)=') ? 'Algorithmic invariants and edge cases' : topic.explanationReason)}
+                    </span>
+                    {topic.cognitiveLossRisk && (
+                      <div className="text-rose-400/90 text-[10px] mt-0.5">
+                        <span className="font-semibold text-rose-400">Loss Risk: </span>
+                        <span>{topic.cognitiveLossRisk}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

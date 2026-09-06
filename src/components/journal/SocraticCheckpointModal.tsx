@@ -1,17 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Brain, CheckCircle2, AlertTriangle, Sparkles, X, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
+import { getDescriptiveFragileSubconcept } from '../../lib/retentionFragility';
 
 interface SocraticCheckpointModalProps {
   isOpen: boolean;
   onClose: () => void;
   topicTitle?: string;
+  topicCategory?: string;
+  fragileSubconcept?: string;
+  cognitiveLossRisk?: string;
   onSessionComplete?: (score: number) => void;
 }
 
 export const SocraticCheckpointModal: React.FC<SocraticCheckpointModalProps> = ({
   isOpen,
   onClose,
-  topicTitle = 'Grouped-Query Attention (GQA-8)',
+  topicTitle = 'Data Science Concept',
+  topicCategory = 'Machine Learning',
+  fragileSubconcept,
+  cognitiveLossRisk,
   onSessionComplete,
 }) => {
   const [userResponse, setUserResponse] = useState('');
@@ -19,6 +26,68 @@ export const SocraticCheckpointModal: React.FC<SocraticCheckpointModalProps> = (
   const [isEvaluated, setIsEvaluated] = useState(false);
   const [revealedSolution, setRevealedSolution] = useState(false);
   const [score, setScore] = useState<number | null>(null);
+
+  // Compute resolved fragility
+  const resolvedFragility = useMemo(() => {
+    return getDescriptiveFragileSubconcept(
+      topicTitle,
+      topicCategory,
+      0.7,
+      3.5,
+      fragileSubconcept
+    );
+  }, [topicTitle, topicCategory, fragileSubconcept]);
+
+  const activeFragile = fragileSubconcept || resolvedFragility.fragileSubconcept;
+  const activeRisk = cognitiveLossRisk || resolvedFragility.cognitiveLossRisk;
+
+  // Domain-specific tailored questions and model solutions
+  const promptData = useMemo(() => {
+    const lower = topicTitle.toLowerCase();
+    if (lower.includes('attention') || lower.includes('transformer') || lower.includes('mha')) {
+      return {
+        question: `In multi-head self-attention with head dimension $d_k$, why is the inner product $QK^T$ scaled specifically by $\\frac{1}{\\sqrt{d_k}}$, and what happens to the softmax gradients and numerical stability when this variance scaling factor is omitted as $d_k$ grows large?`,
+        placeholder: `Explain the variance of the dot product of independent random variables with zero mean and unit variance, and how large magnitudes push softmax into vanishing gradient saturation...`,
+        solution: `For independent components of $q$ and $k$ with zero mean and unit variance, their inner product has mean 0 and variance $d_k$. Without dividing by $\\sqrt{d_k}$, large magnitudes push softmax into regions with vanishingly small gradients, causing severe training stagnation and FP16 underflow.`,
+        feedback: `Your formulation correctly captured variance preservation in dot-product attention and why vanishing softmax gradients occur. Your retention trajectory for ${topicTitle} has been reinforced.`,
+      };
+    }
+
+    if (lower.includes('gin') || lower.includes('postgres') || lower.includes('jsonb') || lower.includes('index')) {
+      return {
+        question: `What is the architectural difference between jsonb_ops and jsonb_path_ops in a PostgreSQL GIN index, and in what query scenarios does jsonb_ops incur severe index bloat compared to path ops?`,
+        placeholder: `Explain how inverted indexes map JSON keys vs paths, comparing top-level existence checks (?) with containment operators (@>)...`,
+        solution: `jsonb_ops creates separate inverted index entries for every JSON key, value, and array element, supporting key-exists checks (?) but causing massive index bloat. jsonb_path_ops hashes only complete root-to-leaf paths, resulting in 2-3x smaller indexes with faster searches for containment (@>), but it cannot index top-level key existence alone.`,
+        feedback: `Your formulation accurately distinguished inverted index path hashing and storage overhead trade-offs. Your retention trajectory for ${topicTitle} has been reinforced.`,
+      };
+    }
+
+    if (lower.includes('flash') || lower.includes('kernel') || lower.includes('cuda')) {
+      return {
+        question: `How does FlashAttention avoid materializing the $N \\times N$ attention matrix in GPU HBM, and how is the online softmax computed incrementally across SRAM tiles?`,
+        placeholder: `Describe SRAM block tiling, the online softmax running maximum and normalization sum update equations, and kernel fusion...`,
+        solution: `FlashAttention splits inputs into SRAM-sized blocks, running online softmax by tracking running maximum $m$ and normalization sum $l$. Softmax rescaling occurs locally on-chip, reducing memory I/O from $\\mathcal{O}(N^2)$ to $\\mathcal{O}(N^2 d / M)$ without ever materializing intermediate attention weights in DRAM.`,
+        feedback: `Your formulation demonstrated precise mastery of GPU memory hierarchy and online softmax tiling. Your retention trajectory for ${topicTitle} has been reinforced.`,
+      };
+    }
+
+    if (lower.includes('lora') || lower.includes('peft') || lower.includes('fine-tuning')) {
+      return {
+        question: `In Low-Rank Adaptation (LoRA), given frozen weight matrix $W_0 \\in \\mathbb{R}^{d \\times k}$, why is the update parameterized as $\\Delta W = \\frac{\\alpha}{r} B A$, and what mathematical role does scaling factor $\\alpha$ play when altering rank $r$?`,
+        placeholder: `Explain the rank decomposition matrices B and A, why A is Gaussian-initialized and B is zero-initialized, and how alpha / r preserves gradient scale...`,
+        solution: `$B \\in \\mathbb{R}^{d \\times r}$ and $A \\in \\mathbb{R}^{r \\times k}$ constrain updates to a low intrinsic rank. $A \\sim \\mathcal{N}(0, \\sigma^2)$ and $B=0$ ensure $\\Delta W = 0$ at initialization. The constant factor $\\frac{\\alpha}{r}$ stabilizes hyperparameter tuning by keeping the learning rate scaling invariant when experimenting with different rank values $r$.`,
+        feedback: `Your formulation accurately framed low-rank projection algebra and invariant scaling. Your retention trajectory for ${topicTitle} has been reinforced.`,
+      };
+    }
+
+    // Default dynamic probe tailored to the concept's identified fragile nuance
+    return {
+      question: `In the implementation of ${topicTitle}: how do you mathematically or architecturally safeguard against ${activeFragile}, and what runtime invariants prevent ${activeRisk}?`,
+      placeholder: `Explain the invariant conditions, mathematical bounds, and explicit validation safeguards required to handle ${activeFragile}...`,
+      solution: `To safeguard ${topicTitle}, the implementation must enforce strict validation on ${activeFragile}, verify memory alignment and tensor strides, and establish assertions around distribution bounds to prevent ${activeRisk}.`,
+      feedback: `Your formulation accurately addressed the fragile edge cases and invariant constraints in ${topicTitle}. Your retention trajectory has been reinforced.`,
+    };
+  }, [topicTitle, activeFragile, activeRisk]);
 
   if (!isOpen) return null;
 
@@ -29,11 +98,12 @@ export const SocraticCheckpointModal: React.FC<SocraticCheckpointModalProps> = (
     setTimeout(() => {
       setIsEvaluating(false);
       setIsEvaluated(true);
-      setScore(88);
+      const calculatedScore = Math.min(96, Math.max(82, Math.round(75 + userResponse.trim().length / 15)));
+      setScore(calculatedScore);
       if (onSessionComplete) {
-        onSessionComplete(88);
+        onSessionComplete(calculatedScore);
       }
-    }, 1200);
+    }, 1000);
   };
 
   const handleReset = () => {
@@ -73,6 +143,18 @@ export const SocraticCheckpointModal: React.FC<SocraticCheckpointModalProps> = (
 
         {/* Content Body */}
         <div className="p-6 overflow-y-auto space-y-5 flex-1">
+          {/* Fragile Nuance Banner */}
+          <div className="p-3 bg-amber-950/10 rounded-xl border border-amber-500/30 text-xs">
+            <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold text-amber-800 uppercase tracking-wider mb-1">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span>Targeted Fragile Nuance</span>
+            </div>
+            <p className="text-stone-700 font-sans leading-relaxed">
+              <span className="font-semibold text-amber-900">{activeFragile}</span> —{' '}
+              <span className="text-rose-700">{activeRisk}</span>
+            </p>
+          </div>
+
           {/* Prompt card */}
           <div className="p-4 rounded-xl bg-[#F0F3FF] border border-[#D0DEFF] space-y-2">
             <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-[#005691] uppercase">
@@ -80,7 +162,7 @@ export const SocraticCheckpointModal: React.FC<SocraticCheckpointModalProps> = (
               <span>Socratic Diagnostic Question</span>
             </div>
             <p className="text-sm font-sans text-[#111C2D] font-medium leading-relaxed">
-              When grouping 32 query heads to 8 key-value heads in GQA ($H_q=32, H_kv=8$), how do you calculate the tensor stride offsets to prevent uncoalesced global memory reads across CUDA thread blocks when batch size $B &gt; 1$?
+              {promptData.question}
             </p>
           </div>
 
@@ -93,7 +175,7 @@ export const SocraticCheckpointModal: React.FC<SocraticCheckpointModalProps> = (
               <textarea
                 value={userResponse}
                 onChange={(e) => setUserResponse(e.target.value)}
-                placeholder="Explain the stride mechanism, program ID grouping (pid // GROUP_SIZE), and memory alignment constraints..."
+                placeholder={promptData.placeholder}
                 className="w-full h-36 p-3.5 bg-[#FAF8F5] border border-[#E5E0D8] rounded-xl text-xs sm:text-sm font-mono text-[#111C2D] placeholder:text-slate-400 focus:bg-white focus:border-[#006948] focus:outline-none resize-none leading-relaxed"
               />
 
@@ -130,7 +212,7 @@ export const SocraticCheckpointModal: React.FC<SocraticCheckpointModalProps> = (
                 <div className="p-3.5 rounded-xl bg-[#FFF8ED] border border-amber-200 text-xs font-mono text-[#8D4B00] space-y-1 animate-in fade-in">
                   <div className="font-bold">Model Solution Reference:</div>
                   <p className="font-sans leading-relaxed text-slate-800">
-                    With group size $G = H_q / H_kv = 4$, each KV head index is obtained via <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-900">kv_head_idx = pid // G</code>. To ensure coalesced reads, the stride for the head dimension in Q must multiply by $G$, while K and V strides must preserve continuous memory alignment on 128-byte SRAM tile boundaries.
+                    {promptData.solution}
                   </p>
                 </div>
               )}
@@ -147,7 +229,7 @@ export const SocraticCheckpointModal: React.FC<SocraticCheckpointModalProps> = (
                     </span>
                   </div>
                   <p className="text-xs font-sans text-emerald-900 leading-relaxed">
-                    Your formulation correctly recognized the tensor stride division factor and CUDA thread block alignment invariants. Your topic retention trajectory for GQA has been boosted by +18.4 days.
+                    {promptData.feedback}
                   </p>
                 </div>
               </div>
@@ -158,8 +240,12 @@ export const SocraticCheckpointModal: React.FC<SocraticCheckpointModalProps> = (
                   <span className="text-[#006948] font-bold">Synchronized with Firestore</span>
                 </div>
                 <div className="flex justify-between items-center text-[#505F76]">
+                  <span>Targeted Concept:</span>
+                  <span className="font-bold text-[#111C2D]">{topicTitle}</span>
+                </div>
+                <div className="flex justify-between items-center text-[#505F76]">
                   <span>Decay Halflife:</span>
-                  <span className="font-bold text-[#111C2D]">S(t) increased from 4.2d → 22.6d</span>
+                  <span className="font-bold text-emerald-800">S(t) increased from 4.2d → 24.5d (+20.3d)</span>
                 </div>
               </div>
 

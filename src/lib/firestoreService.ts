@@ -29,6 +29,7 @@ import {
   RecallEvaluation,
   UserProfile,
 } from '../types';
+import { getDescriptiveFragileSubconcept } from './retentionFragility';
 
 /**
  * Standard Operation Types for Firestore Error Reporting
@@ -214,7 +215,17 @@ export function extractConceptsLocally(
 export function calculateTopicPriority(
   topic: Partial<TopicRetentionState>,
   baseImportance = 0.85
-): { priorityScore: number; explanationReason: string; T_decay: number; A_signal: number; H_weakness: number; M_freq: number } {
+): {
+  priorityScore: number;
+  explanationReason: string;
+  fragileSubconcept: string;
+  cognitiveLossRisk: string;
+  mathematicalParameters: string;
+  T_decay: number;
+  A_signal: number;
+  H_weakness: number;
+  M_freq: number;
+} {
   const lastEvent = topic.lastRecallAt || topic.lastLoggedAt || new Date().toISOString();
   const elapsedDays = Math.max(0.1, (Date.now() - new Date(lastEvent).getTime()) / (1000 * 86400));
   
@@ -236,9 +247,27 @@ export function calculateTopicPriority(
   const rawPriority = (0.4 * T_decay + 0.35 * A_signal + 0.25 * H_weakness) * M_freq * (baseImportance || 1.0) * 100;
   const priorityScore = Math.round(Math.min(100, Math.max(5, rawPriority)) * 10) / 10;
   
-  const explanationReason = `T(t)=${T_decay} (${elapsedDays.toFixed(1)}d) | A(t)=${A_signal} | H(t)=${H_weakness} | M(t)=${M_freq}`;
-  
-  return { priorityScore, explanationReason, T_decay, A_signal, H_weakness, M_freq };
+  const mathematicalParameters = `T(t)=${T_decay} (${elapsedDays.toFixed(1)}d) | A(t)=${A_signal} | H(t)=${H_weakness} | M(t)=${M_freq}`;
+
+  const analysis = getDescriptiveFragileSubconcept(
+    topic.canonicalName || '',
+    topic.category,
+    topic.effectiveAiAssistanceWeight ?? 0.5,
+    score,
+    topic.fragileSubconcept || topic.explanationReason
+  );
+
+  return {
+    priorityScore,
+    explanationReason: analysis.fullDescription,
+    fragileSubconcept: analysis.fragileSubconcept,
+    cognitiveLossRisk: analysis.cognitiveLossRisk,
+    mathematicalParameters,
+    T_decay,
+    A_signal,
+    H_weakness,
+    M_freq,
+  };
 }
 
 export const firestoreService = {
@@ -508,6 +537,9 @@ export const firestoreService = {
       const priorityCalc = calculateTopicPriority(topicState, concept.importanceScore);
       topicState.currentPriorityScore = priorityCalc.priorityScore;
       topicState.explanationReason = priorityCalc.explanationReason;
+      topicState.fragileSubconcept = priorityCalc.fragileSubconcept;
+      topicState.cognitiveLossRisk = priorityCalc.cognitiveLossRisk;
+      topicState.mathematicalParameters = priorityCalc.mathematicalParameters;
 
       console.log(`[FIRESTORE WRITE] [UID: ${userId}] Writing topic state setDoc to path: ${topicPath}`);
       try {
@@ -590,6 +622,9 @@ export const firestoreService = {
           const calc = calculateTopicPriority(state);
           state.currentPriorityScore = calc.priorityScore;
           state.explanationReason = calc.explanationReason;
+          state.fragileSubconcept = calc.fragileSubconcept;
+          state.cognitiveLossRisk = calc.cognitiveLossRisk;
+          state.mathematicalParameters = calc.mathematicalParameters;
 
           topics.push(state);
         }
@@ -851,6 +886,9 @@ export const firestoreService = {
       const calc = calculateTopicPriority(updatedTopic);
       updatedTopic.currentPriorityScore = calc.priorityScore;
       updatedTopic.explanationReason = calc.explanationReason;
+      updatedTopic.fragileSubconcept = calc.fragileSubconcept;
+      updatedTopic.cognitiveLossRisk = calc.cognitiveLossRisk;
+      updatedTopic.mathematicalParameters = calc.mathematicalParameters;
 
       try {
         await setDoc(topicDocRef, stripUndefinedDeep(updatedTopic));
