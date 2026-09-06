@@ -20,6 +20,7 @@ import { WorkJournalFeedPage } from './pages/WorkJournalFeedPage';
 import { RetentionHubPage } from './pages/RetentionHubPage';
 import { AnalyticsDecayPage } from './pages/AnalyticsDecayPage';
 import { SpecPage } from './pages/SpecPage';
+import { JournalWriterPage } from './pages/JournalWriterPage';
 
 export default function App() {
   return (
@@ -29,7 +30,7 @@ export default function App() {
           {/* Public Landing Page */}
           <Route path="/" element={<LandingPageWrapper />} />
 
-          {/* 4 Dedicated Authenticated Pages (Protected by Auth Guard) */}
+          {/* Dedicated Authenticated Pages (Protected by Auth Guard) */}
           <Route
             path="/feed"
             element={
@@ -61,6 +62,18 @@ export default function App() {
                 <SpecPage />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/journal/editor"
+            element={
+              <ProtectedRoute>
+                <JournalWriterPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/writer"
+            element={<Navigate to="/journal/editor" replace />}
           />
 
           {/* Catch-all fallback redirects to Landing */}

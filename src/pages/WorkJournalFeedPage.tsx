@@ -8,7 +8,7 @@ import { CognitiveRetentionStream } from '../components/journal/CognitiveRetenti
 import { Loader2 } from 'lucide-react';
 
 export const WorkJournalFeedPage: React.FC = () => {
-  const { user, refreshProfile } = useAuth();
+  const { user, loading: authLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -16,7 +16,12 @@ export const WorkJournalFeedPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [forceZeroState, setForceZeroState] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  useEffect(() => {
+    // 3. Auth Ready Guard: Entry fetching only fires after authLoading is completely false and currentUser is resolved
+    if (authLoading) {
+      return;
+    }
+
     if (!user) {
       setEntries([]);
       setTopics([]);
@@ -25,32 +30,58 @@ export const WorkJournalFeedPage: React.FC = () => {
     }
 
     setIsLoading(true);
-    try {
-      const [entriesRes, topicsRes] = await Promise.all([
-        api.getJournalEntries().catch(() => ({ entries: [], total: 0 })),
-        api.getTopics().catch(() => ({ topics: [], total: 0 })),
-      ]);
 
-      setEntries(entriesRes.entries || []);
-      setTopics(topicsRes.topics || []);
-    } catch (err) {
-      console.warn('Error fetching feed data:', err);
-    } finally {
+    // 2. Timeout Safety Net:
+    // Add a fallback setTimeout (3 seconds) inside the loading effect so if Firestore/Auth sync takes too long,
+    // the UI automatically unsets the loading spinner and falls back to rendering the empty zero-state UI.
+    const safetyTimeout = setTimeout(() => {
+      console.warn('[WorkJournalFeedPage] 3s timeout safety net triggered. Unsetting loading state.');
       setIsLoading(false);
-    }
-  }, [user]);
+    }, 3000);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    // Fetch topics asynchronously
+    api.getTopics().then((topicsRes) => {
+      setTopics(topicsRes.topics || []);
+    }).catch((err) => {
+      console.warn('[WorkJournalFeedPage] Topics fetch warning:', err);
+    });
+
+    // 1. Firestore Unsubscribe & Fallback Handling:
+    // Subscribe to Firestore onSnapshot for journal entries
+    const unsubscribe = api.subscribeJournalEntries(
+      (fetchedEntries, empty) => {
+        clearTimeout(safetyTimeout);
+        setEntries(fetchedEntries);
+        // Ensure setIsLoading(false) is called immediately when snapshot.empty is true or data received
+        setIsLoading(false);
+      },
+      (error) => {
+        console.error('[WorkJournalFeedPage] Firestore onSnapshot error:', error);
+        clearTimeout(safetyTimeout);
+        // Error callback explicitly sets loading to false
+        setIsLoading(false);
+      }
+    );
+
+    return () => {
+      clearTimeout(safetyTimeout);
+      unsubscribe();
+    };
+  }, [user, authLoading]);
 
   const handleJournalSuccess = async (entry: JournalEntry, concepts: ExtractedConcept[]) => {
     await refreshProfile();
-    await fetchData();
+    try {
+      const topicsRes = await api.getTopics();
+      setTopics(topicsRes.topics || []);
+    } catch (e) {
+      // ignore
+    }
   };
 
   const handleNavSelect = (navId: string) => {
     if (navId === 'feed') navigate('/feed');
+    else if (navId === 'editor' || navId === 'writer') navigate('/journal/editor');
     else if (navId === 'hub') navigate('/hub');
     else if (navId === 'analytics') navigate('/analytics');
     else if (navId === 'spec') navigate('/spec');

@@ -5,7 +5,7 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, ActionCodeSettings } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, memoryLocalCache, getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 // Standard fallback app URL when window.location.origin is unavailable
@@ -37,7 +37,7 @@ export function getActionCodeSettings(path = ''): ActionCodeSettings {
 }
 
 // Use authoritative configuration from provisioned firebase-applet-config.json
-const gcpProjectId = import.meta.env.VITE_GCP_PROJECT_ID || firebaseConfig.projectId;
+const gcpProjectId = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GCP_PROJECT_ID) || firebaseConfig.projectId;
 const effectiveFirebaseConfig = {
   ...firebaseConfig,
   projectId: gcpProjectId,
@@ -67,10 +67,24 @@ googleProvider.setCustomParameters({
   prompt: 'select_account',
 });
 
-// Cloud Firestore instance bound to the app's provisioned databaseId or default
-export const db =
-  !firebaseConfig.firestoreDatabaseId || firebaseConfig.firestoreDatabaseId === '(default)'
-    ? getFirestore(app)
-    : getFirestore(app, firebaseConfig.firestoreDatabaseId);
+// Cloud Firestore instance bound to the app's provisioned databaseId or default.
+// Disabled offline persistence during debugging (via memoryLocalCache)
+// so failed network writes error out immediately instead of silently storing locally.
+const databaseId = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
+  ? firebaseConfig.firestoreDatabaseId
+  : undefined;
+
+let firestoreInstance;
+try {
+  firestoreInstance = initializeFirestore(app, {
+    ...(databaseId ? { databaseId } : {}),
+    localCache: memoryLocalCache(),
+    experimentalAutoDetectLongPolling: true,
+  });
+} catch (e) {
+  firestoreInstance = getFirestore(app);
+}
+
+export const db = firestoreInstance;
 
 export default app;

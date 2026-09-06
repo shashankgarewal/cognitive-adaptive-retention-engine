@@ -58,6 +58,7 @@ export const ZeroStateHeader: React.FC<ZeroStateHeaderProps> = ({
 
   const navItems = [
     { id: 'feed', label: 'Work Journal Feed', path: '/feed' },
+    { id: 'editor', label: 'Journal Writer', path: '/journal/editor' },
     { id: 'hub', label: 'Retention Hub', path: '/hub' },
     { id: 'analytics', label: 'Analytics & Decay', path: '/analytics' },
     { id: 'spec', label: 'Architecture Spec', path: '/spec' },

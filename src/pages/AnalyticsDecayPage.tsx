@@ -24,13 +24,12 @@ import {
 } from 'lucide-react';
 
 export const AnalyticsDecayPage: React.FC = () => {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, loading: authLoading, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
   const [topics, setTopics] = useState<TopicRetentionState[]>([]);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [isBlueprintOpen, setIsBlueprintOpen] = useState(true);
 
   // Ebbinghaus simulator selected curve
@@ -39,42 +38,41 @@ export const AnalyticsDecayPage: React.FC = () => {
   >('interleaved');
 
   useEffect(() => {
-    async function loadData() {
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
-      setIsLoading(true);
-      try {
-        const [entriesRes, topicsRes] = await Promise.all([
-          api.getJournalEntries().catch(() => ({ entries: [], total: 0 })),
-          api.getTopics().catch(() => ({ topics: [], total: 0 })),
-        ]);
-        setEntries(entriesRes.entries || []);
-        setTopics(topicsRes.topics || []);
-      } catch (err) {
-        console.warn('Failed to load analytics data:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadData();
-  }, [user]);
+    if (authLoading) return;
 
-  const handleJournalSuccess = async (entry: JournalEntry, concepts: ExtractedConcept[]) => {
-    setIsLogModalOpen(false);
-    await refreshProfile();
-    try {
-      const [entriesRes, topicsRes] = await Promise.all([
-        api.getJournalEntries().catch(() => ({ entries: [], total: 0 })),
-        api.getTopics().catch(() => ({ topics: [], total: 0 })),
-      ]);
-      setEntries(entriesRes.entries || []);
-      setTopics(topicsRes.topics || []);
-    } catch (e) {
-      // ignore
+    if (!user) {
+      setIsLoading(false);
+      return;
     }
-  };
+
+    setIsLoading(true);
+
+    const safetyTimeout = setTimeout(() => {
+      setIsLoading(false);
+    }, 3000);
+
+    api.getTopics().then((res) => {
+      setTopics(res.topics || []);
+    }).catch(() => {});
+
+    const unsubscribe = api.subscribeJournalEntries(
+      (fetchedEntries, empty) => {
+        clearTimeout(safetyTimeout);
+        setEntries(fetchedEntries);
+        setIsLoading(false);
+      },
+      (err) => {
+        console.warn('AnalyticsDecayPage snapshot error:', err);
+        clearTimeout(safetyTimeout);
+        setIsLoading(false);
+      }
+    );
+
+    return () => {
+      clearTimeout(safetyTimeout);
+      unsubscribe();
+    };
+  }, [user, authLoading]);
 
   // Trajectory curve mathematical parameters
   // R(t) = e^(-t / S)
@@ -125,12 +123,13 @@ export const AnalyticsDecayPage: React.FC = () => {
     <div className="min-h-screen bg-[#FAF8F5] text-[#1E293B] font-sans flex flex-col selection:bg-emerald-500/20 selection:text-emerald-900 antialiased">
       {/* 1. Global Navigation Header */}
       <ZeroStateHeader
-        onLogClick={() => setIsLogModalOpen(true)}
+        onLogClick={() => navigate('/journal/editor')}
         onViewLanding={() => navigate('/')}
         onToggleBlueprint={() => setIsBlueprintOpen((prev) => !prev)}
         activeNav="analytics"
         onSelectNav={(navId) => {
           if (navId === 'feed') navigate('/feed');
+          else if (navId === 'editor' || navId === 'writer') navigate('/journal/editor');
           else if (navId === 'hub') navigate('/hub');
           else if (navId === 'analytics') navigate('/analytics');
           else if (navId === 'spec') navigate('/spec');
@@ -449,14 +448,6 @@ export const AnalyticsDecayPage: React.FC = () => {
           </div>
         </div>
       </footer>
-
-      {/* Journal Entry Form Modal */}
-      {isLogModalOpen && (
-        <JournalEntryForm
-          onClose={() => setIsLogModalOpen(false)}
-          onSuccess={handleJournalSuccess}
-        />
-      )}
     </div>
   );
 };

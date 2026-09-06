@@ -16,6 +16,7 @@ import {
   where,
   increment,
   serverTimestamp,
+  onSnapshot,
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import {
@@ -29,6 +30,92 @@ import {
   UserProfile,
 } from '../types';
 
+/**
+ * Standard Operation Types for Firestore Error Reporting
+ */
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+/**
+ * Structured Firestore Error Details
+ */
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+/**
+ * Uniform Firestore Error Handler
+ * Catches permission-denied, network failures, or database write exceptions,
+ * prints detailed auth/path context, and throws a JSON-formatted Error string.
+ */
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
+  const currentUser = auth.currentUser;
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: currentUser?.uid ?? null,
+      email: currentUser?.email ?? null,
+      emailVerified: currentUser?.emailVerified ?? null,
+      isAnonymous: currentUser?.isAnonymous ?? null,
+      providerInfo: currentUser?.providerData?.map((provider) => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || [],
+    },
+    operationType,
+    path,
+  };
+
+  console.error(
+    `[FIRESTORE ERROR] [UID: ${currentUser?.uid ?? 'UNAUTHENTICATED'}] [Path: ${path}] [Op: ${operationType}]`,
+    JSON.stringify(errInfo)
+  );
+  throw new Error(JSON.stringify(errInfo));
+}
+
+/**
+ * Executes a Promise with a maximum timeout to prevent UI components from spinning indefinitely.
+ */
+export function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs = 5000,
+  errorMessage = 'Firestore operation timed out'
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${errorMessage} (after ${timeoutMs}ms)`));
+    }, timeoutMs);
+
+    promise
+      .then((res) => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
 // AI Assistance Weights for CARE Heuristics
 const AI_ASSISTANCE_WEIGHTS: Record<AiAssistanceLevel, number> = {
   none: 0.1,
@@ -36,6 +123,31 @@ const AI_ASSISTANCE_WEIGHTS: Record<AiAssistanceLevel, number> = {
   spec_driven: 0.75,
   agentic: 1.0,
 };
+
+/**
+ * Deeply removes any undefined keys or values from an object before Firestore submission.
+ * Firestore strictly rejects documents with any property set to undefined.
+ */
+export function stripUndefinedDeep<T>(obj: T): T {
+  if (obj === undefined) {
+    return null as unknown as T;
+  }
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj
+      .filter((v) => v !== undefined)
+      .map((v) => stripUndefinedDeep(v)) as unknown as T;
+  }
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      result[key] = stripUndefinedDeep(value);
+    }
+  }
+  return result as T;
+}
 
 function sanitizeTopicId(rawId: string, canonicalName: string): string {
   const clean = (rawId || canonicalName || 'topic').trim().toLowerCase();
@@ -131,14 +243,94 @@ export function calculateTopicPriority(
 
 export const firestoreService = {
   /**
+   * Subscribes to real-time journal entries for a given user from Firestore.
+   * Explicitly logs current UID and collection path, and handles listener errors.
+   */
+  subscribeUserJournalEntries(
+    userId: string,
+    onUpdate: (entries: JournalEntry[], empty: boolean) => void,
+    onError?: (error: any) => void
+  ): () => void {
+    if (!userId) {
+      onUpdate([], true);
+      return () => {};
+    }
+
+    const path = `users/${userId}/journal_entries`;
+    console.log(`[FIRESTORE LISTENER] [UID: ${userId}] Subscribing to real-time updates on path: ${path}`);
+
+    try {
+      const entriesRef = collection(db, 'users', userId, 'journal_entries');
+      const q = query(entriesRef, orderBy('createdAt', 'desc'));
+
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          if (snapshot.empty) {
+            onUpdate([], true);
+            return;
+          }
+
+          const entries: JournalEntry[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            if (data && data.entryId) {
+              entries.push({
+                entryId: data.entryId,
+                userId: data.userId || userId,
+                title: data.title || 'Untitled Journal',
+                rawContent: data.rawContent || '',
+                aiAssistanceLevel: data.aiAssistanceLevel || 'prompt_driven',
+                aiReliancePercentage: data.aiReliancePercentage,
+                aiToolUsed: data.aiToolUsed,
+                modeType: data.modeType || 'Web App',
+                stabilityRatio: data.stabilityRatio,
+                kernelProfileSnapshot: data.kernelProfileSnapshot,
+                hardwareProfile: data.hardwareProfile,
+                tags: data.tags || [],
+                timeUtc: data.timeUtc,
+                actionLabel: data.actionLabel,
+                dateGroup: data.dateGroup,
+                extractedConcepts: data.extractedConcepts || [],
+                createdAt: data.createdAt || new Date().toISOString(),
+              });
+            }
+          });
+
+          onUpdate(entries, snapshot.empty);
+        },
+        (error) => {
+          console.warn(`[FIRESTORE LISTENER WARNING] [UID: ${userId}] Path: ${path}`, error.message || error);
+          if (onError) onError(error);
+          onUpdate([], true);
+        }
+      );
+
+      return unsubscribe;
+    } catch (err: any) {
+      console.warn(`[FIRESTORE INIT LISTENER WARNING] [UID: ${userId}] Path: ${path}`, err.message || err);
+      if (onError) onError(err);
+      onUpdate([], true);
+      return () => {};
+    }
+  },
+
+  /**
    * Fetches journal entries belonging exclusively to the given userId from Firestore.
    */
   async getUserJournalEntries(userId: string): Promise<JournalEntry[]> {
     if (!userId) return [];
+    const path = `users/${userId}/journal_entries`;
+    console.log(`[FIRESTORE GET] [UID: ${userId}] Querying documents at path: ${path}`);
+
     try {
       const entriesRef = collection(db, 'users', userId, 'journal_entries');
       const q = query(entriesRef, orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
+      const snapshot = await withTimeout(
+        getDocs(q),
+        10000,
+        `getDocs timeout on path ${path}`
+      );
 
       const entries: JournalEntry[] = [];
       snapshot.forEach((docSnap) => {
@@ -167,8 +359,8 @@ export const firestoreService = {
       });
 
       return entries;
-    } catch (err) {
-      console.warn('[FIRESTORE] Fetching journal entries warning:', err);
+    } catch (err: any) {
+      console.warn(`[FIRESTORE GET WARNING] [UID: ${userId}] Path: ${path}`, err.message || err);
       return [];
     }
   },
@@ -216,14 +408,13 @@ export const firestoreService = {
     const concepts = extractConceptsLocally(payload.title, payload.rawContent, payload.aiAssistanceLevel);
 
     // 2. Build entry object
-    const entry: JournalEntry = {
+    const entry: Record<string, any> = {
       entryId,
       userId,
       title: payload.title.trim(),
       rawContent: payload.rawContent.trim(),
       aiAssistanceLevel: payload.aiAssistanceLevel,
       aiReliancePercentage: reliancePct,
-      aiToolUsed: payload.aiToolUsed,
       modeType: payload.modeType || 'Web App',
       stabilityRatio,
       tags: payload.tags && payload.tags.length > 0 ? payload.tags : concepts.map((c) => `#${c.canonicalName}`),
@@ -233,20 +424,45 @@ export const firestoreService = {
       extractedConcepts: concepts,
       createdAt: nowIso,
     };
+    if (payload.aiToolUsed && payload.aiToolUsed.trim()) {
+      entry.aiToolUsed = payload.aiToolUsed.trim();
+    }
 
     // 3. Persist entry doc to Firestore
+    const entryPath = `users/${userId}/journal_entries/${entryId}`;
+    console.log(`[FIRESTORE WRITE] [UID: ${userId}] Writing setDoc to path: ${entryPath}`);
     const entryDocRef = doc(db, 'users', userId, 'journal_entries', entryId);
-    await setDoc(entryDocRef, entry);
+    try {
+      await withTimeout(
+        setDoc(entryDocRef, stripUndefinedDeep(entry)),
+        15000,
+        `setDoc timeout on path ${entryPath}`
+      );
+    } catch (err: any) {
+      console.warn(`[FIRESTORE WRITE WARNING] ${err.message || err}`);
+    }
 
     // 4. Update/Create Topic Retention States in Firestore
     const updatedTopics: TopicRetentionState[] = [];
     for (const concept of concepts) {
       const topicId = concept.topicId;
+      const topicPath = `users/${userId}/topic_retention_states/${topicId}`;
+      console.log(`[FIRESTORE ACCESS] [UID: ${userId}] Accessing topic state at path: ${topicPath}`);
       const topicDocRef = doc(db, 'users', userId, 'topic_retention_states', topicId);
-      const existingSnap = await getDoc(topicDocRef);
+
+      let existingSnap: any = null;
+      try {
+        existingSnap = await withTimeout(
+          getDoc(topicDocRef),
+          10000,
+          `getDoc timeout on path ${topicPath}`
+        );
+      } catch (err: any) {
+        console.warn(`[FIRESTORE GET WARNING] ${err.message || err}`);
+      }
 
       let topicState: TopicRetentionState;
-      if (existingSnap.exists()) {
+      if (existingSnap && existingSnap.exists && existingSnap.exists()) {
         const data = existingSnap.data();
         const occurrences = (data.journalOccurrences || 1) + 1;
         const signals = [...(data.recentAiAssistanceSignals || []), payload.aiAssistanceLevel].slice(-10);
@@ -293,28 +509,43 @@ export const firestoreService = {
       topicState.currentPriorityScore = priorityCalc.priorityScore;
       topicState.explanationReason = priorityCalc.explanationReason;
 
-      await setDoc(topicDocRef, topicState);
+      console.log(`[FIRESTORE WRITE] [UID: ${userId}] Writing topic state setDoc to path: ${topicPath}`);
+      try {
+        await withTimeout(
+          setDoc(topicDocRef, stripUndefinedDeep(topicState)),
+          15000,
+          `setDoc topic timeout on path ${topicPath}`
+        );
+      } catch (err: any) {
+        console.warn(`[FIRESTORE WRITE WARNING] ${err.message || err}`);
+      }
       updatedTopics.push(topicState);
     }
 
     // 5. Update user profile statistics
+    const userPath = `users/${userId}`;
+    console.log(`[FIRESTORE WRITE] [UID: ${userId}] Updating user profile stats merge at path: ${userPath}`);
     try {
       const userDocRef = doc(db, 'users', userId);
-      await setDoc(
-        userDocRef,
-        {
-          updatedAt: nowIso,
-          stats: {
-            totalJournalsLogged: increment(1),
-          },
-        },
-        { merge: true }
+      await withTimeout(
+        setDoc(
+          userDocRef,
+          stripUndefinedDeep({
+            updatedAt: nowIso,
+            stats: {
+              totalJournalsLogged: increment(1),
+            },
+          }),
+          { merge: true }
+        ),
+        15000,
+        `setDoc stats timeout on path ${userPath}`
       );
-    } catch (e) {
-      // Ignore profile stat update error
+    } catch (e: any) {
+      console.warn(`[FIRESTORE MERGE WARNING] [UID: ${userId}] Path: ${userPath}`, e);
     }
 
-    return { entry, extractedConcepts: concepts, updatedTopics };
+    return { entry: entry as JournalEntry, extractedConcepts: concepts, updatedTopics };
   },
 
   /**
@@ -322,9 +553,16 @@ export const firestoreService = {
    */
   async getUserTopics(userId: string): Promise<TopicRetentionState[]> {
     if (!userId) return [];
+    const path = `users/${userId}/topic_retention_states`;
+    console.log(`[FIRESTORE GET] [UID: ${userId}] Fetching topics at path: ${path}`);
+
     try {
       const topicsRef = collection(db, 'users', userId, 'topic_retention_states');
-      const snapshot = await getDocs(topicsRef);
+      const snapshot = await withTimeout(
+        getDocs(topicsRef),
+        10000,
+        `getDocs timeout on path ${path}`
+      );
 
       const topics: TopicRetentionState[] = [];
       snapshot.forEach((docSnap) => {
@@ -360,8 +598,8 @@ export const firestoreService = {
       // Sort descending by priority score
       topics.sort((a, b) => b.currentPriorityScore - a.currentPriorityScore);
       return topics;
-    } catch (err) {
-      console.warn('[FIRESTORE] Fetching topics warning:', err);
+    } catch (err: any) {
+      console.warn(`[FIRESTORE GET WARNING] [UID: ${userId}] Path: ${path}`, err.message || err);
       return [];
     }
   },
@@ -375,11 +613,19 @@ export const firestoreService = {
     targetDepth: 'foundational' | 'intermediate' | 'advanced' = 'intermediate',
     customFocusArea?: string
   ): Promise<{ session: RecallSession; topic: TopicRetentionState; breakdown: any }> {
+    const topicPath = `users/${userId}/topic_retention_states/${topicId}`;
+    console.log(`[FIRESTORE READ] [UID: ${userId}] Fetching topic state for session init at path: ${topicPath}`);
     const topicDocRef = doc(db, 'users', userId, 'topic_retention_states', topicId);
-    const snap = await getDoc(topicDocRef);
+
+    let snap: any = null;
+    try {
+      snap = await getDoc(topicDocRef);
+    } catch (err: any) {
+      console.warn(`[FIRESTORE GET WARNING] [UID: ${userId}] Path: ${topicPath}`, err.message || err);
+    }
 
     let topic: TopicRetentionState;
-    if (snap.exists()) {
+    if (snap && snap.exists && snap.exists()) {
       topic = snap.data() as TopicRetentionState;
     } else {
       // Fallback baseline topic
@@ -414,6 +660,7 @@ export const firestoreService = {
     };
 
     const sessionId = `session_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`;
+    const sessionPath = `users/${userId}/recall_sessions/${sessionId}`;
     const session: RecallSession = {
       sessionId,
       userId,
@@ -427,8 +674,13 @@ export const firestoreService = {
       startedAt: new Date().toISOString(),
     };
 
+    console.log(`[FIRESTORE WRITE] [UID: ${userId}] Initializing recall session at path: ${sessionPath}`);
     const sessionDocRef = doc(db, 'users', userId, 'recall_sessions', sessionId);
-    await setDoc(sessionDocRef, session);
+    try {
+      await setDoc(sessionDocRef, stripUndefinedDeep(session));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, sessionPath);
+    }
 
     return { session, topic, breakdown };
   },
@@ -441,9 +693,18 @@ export const firestoreService = {
     sessionId: string,
     userMessage?: string
   ): Promise<{ session: RecallSession; turn: ChatTurn; isFirstTurn: boolean }> {
+    const sessionPath = `users/${userId}/recall_sessions/${sessionId}`;
+    console.log(`[FIRESTORE READ] [UID: ${userId}] Fetching session for turn update at path: ${sessionPath}`);
     const sessionDocRef = doc(db, 'users', userId, 'recall_sessions', sessionId);
-    const snap = await getDoc(sessionDocRef);
-    if (!snap.exists()) throw new Error(`Session ${sessionId} not found`);
+
+    let snap: any = null;
+    try {
+      snap = await getDoc(sessionDocRef);
+    } catch (err: any) {
+      console.warn(`[FIRESTORE GET WARNING] [UID: ${userId}] Path: ${sessionPath}`, err.message || err);
+    }
+
+    if (!snap || !snap.exists || !snap.exists()) throw new Error(`Session ${sessionId} not found`);
 
     const session = snap.data() as RecallSession;
     if (!session.turns) session.turns = [];
@@ -484,7 +745,13 @@ export const firestoreService = {
     };
 
     session.turns.push(assistantTurn);
-    await setDoc(sessionDocRef, session);
+
+    console.log(`[FIRESTORE WRITE] [UID: ${userId}] Updating session turns at path: ${sessionPath}`);
+    try {
+      await setDoc(sessionDocRef, stripUndefinedDeep(session));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, sessionPath);
+    }
 
     return {
       session,
@@ -500,9 +767,18 @@ export const firestoreService = {
     userId: string,
     sessionId: string
   ): Promise<{ session: RecallSession; evaluation: RecallEvaluation; updatedTopic: TopicRetentionState }> {
+    const sessionPath = `users/${userId}/recall_sessions/${sessionId}`;
+    console.log(`[FIRESTORE READ] [UID: ${userId}] Fetching session for evaluation at path: ${sessionPath}`);
     const sessionDocRef = doc(db, 'users', userId, 'recall_sessions', sessionId);
-    const snap = await getDoc(sessionDocRef);
-    if (!snap.exists()) throw new Error(`Session ${sessionId} not found`);
+
+    let snap: any = null;
+    try {
+      snap = await getDoc(sessionDocRef);
+    } catch (err: any) {
+      console.warn(`[FIRESTORE GET WARNING] [UID: ${userId}] Path: ${sessionPath}`, err.message || err);
+    }
+
+    if (!snap || !snap.exists || !snap.exists()) throw new Error(`Session ${sessionId} not found`);
 
     const session = snap.data() as RecallSession;
     const userTurns = (session.turns || []).filter((t) => t.role === 'user');
@@ -534,14 +810,28 @@ export const firestoreService = {
     session.evaluation = evaluation;
     session.completedAt = nowIso;
 
-    await setDoc(sessionDocRef, session);
+    console.log(`[FIRESTORE WRITE] [UID: ${userId}] Saving evaluated session at path: ${sessionPath}`);
+    try {
+      await setDoc(sessionDocRef, stripUndefinedDeep(session));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, sessionPath);
+    }
 
     // Update Topic in Firestore
+    const topicPath = `users/${userId}/topic_retention_states/${session.topicId}`;
+    console.log(`[FIRESTORE ACCESS] [UID: ${userId}] Updating post-recall topic state at path: ${topicPath}`);
     const topicDocRef = doc(db, 'users', userId, 'topic_retention_states', session.topicId);
-    const topicSnap = await getDoc(topicDocRef);
+
+    let topicSnap: any = null;
+    try {
+      topicSnap = await getDoc(topicDocRef);
+    } catch (err: any) {
+      console.warn(`[FIRESTORE GET WARNING] [UID: ${userId}] Path: ${topicPath}`, err.message || err);
+    }
+
     let updatedTopic: TopicRetentionState;
 
-    if (topicSnap.exists()) {
+    if (topicSnap && topicSnap.exists && topicSnap.exists()) {
       const topicData = topicSnap.data() as TopicRetentionState;
       const history = topicData.recallHistory || [];
       history.push({
@@ -562,7 +852,11 @@ export const firestoreService = {
       updatedTopic.currentPriorityScore = calc.priorityScore;
       updatedTopic.explanationReason = calc.explanationReason;
 
-      await setDoc(topicDocRef, updatedTopic);
+      try {
+        await setDoc(topicDocRef, stripUndefinedDeep(updatedTopic));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, topicPath);
+      }
     } else {
       updatedTopic = {
         topicId: session.topicId,
@@ -580,7 +874,11 @@ export const firestoreService = {
         currentPriorityScore: 25.0,
         decayFactor: 0.4,
       };
-      await setDoc(topicDocRef, updatedTopic);
+      try {
+        await setDoc(topicDocRef, stripUndefinedDeep(updatedTopic));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, topicPath);
+      }
     }
 
     return { session, evaluation, updatedTopic };

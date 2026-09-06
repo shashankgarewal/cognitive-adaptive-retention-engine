@@ -9,6 +9,7 @@
  */
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Zap, X, Layers } from 'lucide-react';
 import { ZeroStateHeader } from './ZeroStateHeader';
 import { ZeroStateMetricCards } from './ZeroStateMetricCards';
@@ -16,7 +17,6 @@ import { ZeroStateOnboardingCard } from './ZeroStateOnboardingCard';
 import { ZeroStateEmptyFeed } from './ZeroStateEmptyFeed';
 import { ZeroStateBlueprintPanel } from './ZeroStateBlueprintPanel';
 import { ZeroStateInfoModals } from './ZeroStateInfoModals';
-import { JournalEntryForm } from '../journal/JournalEntryForm';
 import { ExtractedConcept, JournalEntry } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 
@@ -40,11 +40,9 @@ export const ZeroStateDashboard: React.FC<ZeroStateDashboardProps> = ({
   onSelectNav,
 }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   // State for collapsible Right Blueprint Panel
   const [isBlueprintOpen, setIsBlueprintOpen] = useState(true);
-
-  // State for Journal Entry Form Modal
-  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
 
   // State for Info Modals (AI reliance, security spec, quickstart)
   const [activeInfoModal, setActiveInfoModal] = useState<
@@ -59,7 +57,7 @@ export const ZeroStateDashboard: React.FC<ZeroStateDashboardProps> = ({
       onOpenAuth();
       return;
     }
-    setIsLogModalOpen(true);
+    navigate('/journal/editor');
   };
 
   const handleNavSelect = (navId: string) => {
@@ -74,13 +72,6 @@ export const ZeroStateDashboard: React.FC<ZeroStateDashboardProps> = ({
       }
     } else if (onSelectNav) {
       onSelectNav(navId);
-    }
-  };
-
-  const handleJournalSuccess = (entry: JournalEntry, concepts: ExtractedConcept[]) => {
-    setIsLogModalOpen(false);
-    if (onLogJournalSuccess) {
-      onLogJournalSuccess(entry, concepts);
     }
   };
 
@@ -192,42 +183,12 @@ export const ZeroStateDashboard: React.FC<ZeroStateDashboardProps> = ({
         </div>
       </footer>
 
-      {/* Journal Entry Ingestion Modal */}
-      {isLogModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="relative w-full max-w-2xl bg-white rounded-2xl border border-[#E5E0D8] shadow-2xl overflow-hidden p-6 max-h-[90vh] overflow-y-auto text-left">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#E5E0D8]">
-              <div>
-                <h3 className="font-serif font-bold text-xl text-[#1E293B]">
-                  Log Engineering Work Journal
-                </h3>
-                <p className="text-xs text-[#505F76] font-mono">
-                  Input technical notes & AI reliance signals for Gemini concept extraction
-                </p>
-              </div>
-              <button
-                onClick={() => setIsLogModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                aria-label="Close form"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <JournalEntryForm
-              onSuccess={handleJournalSuccess}
-              onCancel={() => setIsLogModalOpen(false)}
-            />
-          </div>
-        </div>
-      )}
-
       {/* Secondary Quick Links Info Modals */}
       <ZeroStateInfoModals
         isOpen={activeInfoModal !== null}
         onClose={() => setActiveInfoModal(null)}
         type={activeInfoModal}
-        onOpenLogModal={() => setIsLogModalOpen(true)}
+        onOpenLogModal={() => navigate('/journal/editor')}
       />
     </div>
   );

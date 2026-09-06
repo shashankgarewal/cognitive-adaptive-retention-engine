@@ -43,7 +43,7 @@ interface WorkspaceHomeProps {
 }
 
 export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth, onViewLanding, onOpenSpec }) => {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, loading: authLoading, profile, refreshProfile } = useAuth();
   const [showJournalForm, setShowJournalForm] = useState(false);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [topics, setTopics] = useState<TopicRetentionState[]>([]);
@@ -63,6 +63,24 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth, onView
   const [testError, setTestError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!user) return;
+    setIsLoadingData(true);
+    try {
+      const topicsRes = await api.getTopics();
+      setTopics(topicsRes.topics || []);
+    } catch (err) {
+      console.warn('Error fetching topics in WorkspaceHome:', err);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    // 3. Auth Ready Guard: Entry fetching only fires after authLoading is completely false and currentUser is resolved
+    if (authLoading) {
+      return;
+    }
+
     if (!user) {
       setEntries([]);
       setTopics([]);
@@ -71,24 +89,41 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth, onView
     }
 
     setIsLoadingData(true);
-    try {
-      const [entriesRes, topicsRes] = await Promise.all([
-        api.getJournalEntries().catch(() => ({ entries: [], total: 0 })),
-        api.getTopics().catch(() => ({ topics: [], total: 0 })),
-      ]);
 
-      setEntries(entriesRes.entries || []);
-      setTopics(topicsRes.topics || []);
-    } catch (err) {
-      console.warn('Error fetching workspace data:', err);
-    } finally {
+    // 2. Timeout Safety Net: 3-second fallback timeout
+    const safetyTimeout = setTimeout(() => {
+      console.warn('[WorkspaceHome] 3s timeout safety net reached. Setting isLoadingData to false.');
       setIsLoadingData(false);
-    }
-  }, [user]);
+    }, 3000);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData, user]);
+    // Fetch topics
+    api.getTopics().then((topicsRes) => {
+      setTopics(topicsRes.topics || []);
+    }).catch((err) => {
+      console.warn('Error fetching topics in WorkspaceHome:', err);
+    });
+
+    // 1. Firestore Unsubscribe & Fallback Handling
+    const unsubscribe = api.subscribeJournalEntries(
+      (fetchedEntries, empty) => {
+        clearTimeout(safetyTimeout);
+        setEntries(fetchedEntries);
+        // Explicitly set loading to false immediately
+        setIsLoadingData(false);
+      },
+      (error) => {
+        console.error('[WorkspaceHome] Firestore onSnapshot error:', error);
+        clearTimeout(safetyTimeout);
+        // Error callback explicitly sets loading to false
+        setIsLoadingData(false);
+      }
+    );
+
+    return () => {
+      clearTimeout(safetyTimeout);
+      unsubscribe();
+    };
+  }, [user, authLoading]);
 
   // Reset form and concept inspector when logged out
   useEffect(() => {
@@ -101,9 +136,14 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth, onView
   }, [user]);
 
   const handleJournalSuccess = async (newEntry: JournalEntry, newConcepts: ExtractedConcept[]) => {
-    // Refresh user profile stats and refresh entries/topics lists
+    // Refresh user profile stats and refresh topics
     await refreshProfile();
-    await fetchData();
+    try {
+      const res = await api.getTopics();
+      setTopics(res.topics || []);
+    } catch (e) {
+      // ignore
+    }
   };
 
   const handleTestTokenVerification = async () => {

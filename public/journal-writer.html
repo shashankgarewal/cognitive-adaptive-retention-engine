@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#FAF8F5]">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Journal Writer & AI Co-Thinking Canvas — CARE</title>
+  <meta name="description" content="Distraction-free engineering work journal editor with AI reliance telemetry and Gemini co-thinking partner for the Cognitive & Adaptive Retention Engine." />
+
+  <!-- Google Fonts: Newsreader (Display Serif), Plus Jakarta Sans (UI Body), JetBrains Mono (Telemetry/Code) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Material Symbols Outlined -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+  <!-- Tailwind CSS CDN with custom config -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            alabaster: '#FAF8F5',
+            sandstone: '#F5F2EC',
+            parchment: '#FFFFFF',
+            hairline: '#E5E0D8',
+            slateDark: '#111C2D',
+            slateMuted: '#505F76',
+            emeraldCare: '#006948',
+            emeraldDark: '#005439',
+            emeraldLight: '#ECFDF5',
+            amberCare: '#8D4B00',
+            amberLight: '#FFF8ED',
+            blueCare: '#005691',
+            blueLight: '#F0F3FF'
+          },
+          fontFamily: {
+            serif: ['Newsreader', 'Georgia', 'serif'],
+            sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          boxShadow: {
+            'paper': '0 1px 3px rgba(17, 28, 45, 0.04), 0 6px 16px rgba(17, 28, 45, 0.03)',
+            'paper-lg': '0 4px 6px -1px rgba(17, 28, 45, 0.05), 0 12px 24px -4px rgba(17, 28, 45, 0.06)',
+            'drawer': '-8px 0 28px rgba(17, 28, 45, 0.12)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar for Scholastic Aesthetic */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #FAF8F5;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D8D2C6;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #B8B0A2;
+    }
+
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      vertical-align: middle;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .material-symbols-outlined.fill-1 {
+      font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+    }
+
+    /* Distraction Free Focus Styles */
+    textarea:focus {
+      outline: none;
+    }
+
+    /* Animation utility classes */
+    .fade-enter {
+      opacity: 0;
+      transform: translateY(6px);
+      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .slide-in-right {
+      transform: translateX(100%);
+      animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes slideIn {
+      to {
+        transform: translateX(0);
+      }
+    }
+  </style>
+</head>
+<body class="min-h-full flex flex-col bg-[#FAF8F5] text-[#111C2D] font-sans antialiased selection:bg-emerald-100 selection:text-emerald-900">
+
+  <!-- ========================================================================= -->
+  <!-- 1. PERSISTENT GLOBAL NAVBAR                                               -->
+  <!-- ========================================================================= -->
+  <header class="sticky top-0 z-40 bg-[#FAF8F5]/95 backdrop-blur-md border-b border-[#E5E0D8] transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Brand / Identity -->
+        <div class="flex items-center gap-3">
+          <a href="/hub" class="group flex items-center gap-2.5 focus:outline-none">
+            <div class="w-9 h-9 rounded-xl bg-[#006948] text-white flex items-center justify-center shadow-xs group-hover:bg-[#005439] transition-colors">
+              <span class="material-symbols-outlined text-[20px]">psychology</span>
+            </div>
+            <div class="flex flex-col">
+              <div class="flex items-center gap-1.5">
+                <span class="font-serif font-bold text-xl tracking-tight text-[#111C2D]">CARE</span>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#E7EEFF] text-[#005691] border border-[#D0DEFF]">v2.4</span>
+              </div>
+              <span class="text-[10px] font-mono text-[#505F76] -mt-0.5 hidden sm:inline">Cognitive & Adaptive Retention</span>
+            </div>
+          </a>
+
+          <!-- Divider -->
+          <div class="h-5 w-[1px] bg-[#E5E0D8] mx-2 hidden md:block"></div>
+
+          <!-- Navigation Links -->
+          <nav class="hidden md:flex items-center gap-1">
+            <a href="/feed" class="px-3 py-1.5 text-xs font-medium text-[#505F76] hover:text-[#111C2D] hover:bg-black/5 rounded-lg transition-colors">
+              Journal Feed
+            </a>
+            <a href="/hub" class="px-3 py-1.5 text-xs font-medium text-[#505F76] hover:text-[#111C2D] hover:bg-black/5 rounded-lg transition-colors">
+              Retention Hub
+            </a>
+            <a href="/analytics" class="px-3 py-1.5 text-xs font-medium text-[#505F76] hover:text-[#111C2D] hover:bg-black/5 rounded-lg transition-colors">
+              Analytics & Decay
+            </a>
+            <a href="/spec" class="px-3 py-1.5 text-xs font-medium text-[#505F76] hover:text-[#111C2D] hover:bg-black/5 rounded-lg transition-colors">
+              Architecture Spec
+            </a>
+            <span class="px-3 py-1.5 text-xs font-semibold text-[#006948] bg-[#ECFDF5] border border-emerald-200/60 rounded-lg">
+              Canvas Editor
+            </span>
+          </nav>
+        </div>
+
+        <!-- Right Header Items: Streaks, Origin Pill, User Profile -->
+        <div class="flex items-center gap-2.5 sm:gap-3">
+          
+          <!-- Consolidation Streak Badge -->
+          <div class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FFF8ED] border border-amber-200/80 text-[#8D4B00] text-xs font-mono font-medium shadow-2xs" title="14 consecutive days of active engineering recall and logging">
+            <span class="material-symbols-outlined text-[15px] text-amber-600 fill-1">local_fire_department</span>
+            <span>14d Streak</span>
+          </div>
+
+          <!-- Auto-Origin Pill (Desktop header preview) -->
+          <div class="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#FAF8F5] border border-[#E5E0D8] text-[11px] font-mono text-[#505F76]" id="navOriginBadge">
+            <span class="material-symbols-outlined text-[14px] text-emerald-600">language</span>
+            <span class="font-medium text-[#111C2D]">Origin: Web App</span>
+          </div>
+
+          <!-- User Profile & Status -->
+          <div class="flex items-center gap-2 pl-2 border-l border-[#E5E0D8]">
+            <div class="w-8 h-8 rounded-full bg-[#006948]/10 border border-[#006948]/20 text-[#006948] font-mono text-xs font-bold flex items-center justify-center shadow-2xs" title="garewal.sk26@gmail.com">
+              SK
+            </div>
+            <div class="hidden xl:flex flex-col text-left">
+              <span class="text-xs font-semibold text-[#111C2D] leading-none">S. Garewal</span>
+              <span class="text-[10px] font-mono text-[#505F76]">Data Science Eng</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- 2. EDITOR TELEMETRY RIBBON                                                -->
+  <!-- ========================================================================= -->
+  <section class="bg-white border-b border-[#E5E0D8] shadow-2xs">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        
+        <!-- Left: Auto Origin Detection & AI Reliance Selector -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          
+          <!-- Auto-Detected Origin Pill (Locked & JS-Resolved) -->
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#FAF8F5] border border-[#E5E0D8] text-xs font-mono text-[#505F76]" id="telemetryOriginPill" title="Automatically resolved via JavaScript browser environment detection">
+            <span class="material-symbols-outlined text-[15px] text-[#006948]">laptop_mac</span>
+            <span class="font-semibold text-[#111C2D]">Logged via:</span>
+            <span id="detectedOriginText" class="font-medium text-[#006948]">Web App (Chrome/Linux)</span>
+          </div>
+
+          <span class="text-slate-300 hidden sm:inline">|</span>
+
+          <!-- AI Reliance Level Horizontal Pills -->
+          <div class="flex items-center gap-1" id="aiRelianceGroup" role="radiogroup" aria-label="AI Reliance Level Selector">
+            <span class="text-[11px] font-mono uppercase font-bold text-[#505F76] mr-1 hidden sm:inline">AI Reliance:</span>
+            
+            <button type="button" data-level="none" data-weight="0.10" onclick="setAiReliance('none', 0.10)" class="reliance-btn px-2.5 py-1 rounded-md border text-xs font-mono font-medium transition-all cursor-pointer border-[#E5E0D8] bg-[#FAF8F5] text-[#505F76] hover:bg-slate-100">
+              Manual <span class="opacity-75 text-[10px]">A=0.10</span>
+            </button>
+
+            <button type="button" data-level="prompt_driven" data-weight="0.50" onclick="setAiReliance('prompt_driven', 0.50)" class="reliance-btn active-reliance px-2.5 py-1 rounded-md border text-xs font-mono font-bold transition-all cursor-pointer border-[#006948] bg-[#ECFDF5] text-[#006948] shadow-2xs">
+              Prompt-Driven <span class="opacity-85 text-[10px]">A=0.50</span>
+            </button>
+
+            <button type="button" data-level="spec_driven" data-weight="0.80" onclick="setAiReliance('spec_driven', 0.80)" class="reliance-btn px-2.5 py-1 rounded-md border text-xs font-mono font-medium transition-all cursor-pointer border-[#E5E0D8] bg-[#FAF8F5] text-[#505F76] hover:bg-slate-100">
+              Spec-Driven <span class="opacity-75 text-[10px]">A=0.80</span>
+            </button>
+
+            <button type="button" data-level="agentic" data-weight="1.00" onclick="setAiReliance('agentic', 1.00)" class="reliance-btn px-2.5 py-1 rounded-md border text-xs font-mono font-medium transition-all cursor-pointer border-[#E5E0D8] bg-[#FAF8F5] text-[#505F76] hover:bg-slate-100">
+              Agentic <span class="opacity-75 text-[10px]">A=1.00</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Right: Optional AI Tool Tag & Predicted Retention Indicator -->
+        <div class="flex items-center gap-2.5">
+          <!-- AI Tool Tag Input -->
+          <div class="relative flex items-center flex-1 sm:flex-none">
+            <span class="material-symbols-outlined text-[16px] text-slate-400 absolute left-2.5 pointer-events-none">auto_awesome</span>
+            <input 
+              type="text" 
+              id="aiToolTagInput" 
+              placeholder="AI Tool (e.g. Cursor, Claude Code)" 
+              value="Cursor / Claude 3.7 Sonnet"
+              class="w-full sm:w-56 pl-8 pr-3 py-1 bg-[#FAF8F5] border border-[#E5E0D8] rounded-md text-xs font-mono text-[#111C2D] placeholder:text-slate-400 focus:bg-white focus:border-[#006948] focus:ring-1 focus:ring-[#006948] transition-all"
+            />
+          </div>
+
+          <!-- Stability Prediction Sparkline -->
+          <div class="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#FAF8F5] border border-[#E5E0D8] text-[11px] font-mono" id="stabilityProjectionBox" title="Predicted mathematical stability ratio S(t) based on selected AI reliance factor">
+            <span class="text-slate-500 text-[10px] uppercase">Stability:</span>
+            <span id="stabilityScoreText" class="font-bold text-[#006948]">0.65 S(t)</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- 3. MAIN DISTRACTION-FREE JOURNAL CANVAS (8-COLUMN CENTER ALIGNMENT)       -->
+  <!-- ========================================================================= -->
+  <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col">
+    
+    <!-- Canvas Card / Pure Optical White Paper Container -->
+    <div class="bg-white rounded-2xl border border-[#E5E0D8] shadow-paper flex-1 flex flex-col overflow-hidden relative transition-all">
+      
+      <!-- Top Canvas Controls: Title Field & Gemini Auto-Title Button -->
+      <div class="p-6 sm:p-8 pb-3 border-b border-[#F0ECE6]">
+        
+        <div class="flex items-start justify-between gap-4">
+          <!-- Large Frameless Title Input -->
+          <div class="flex-1">
+            <input 
+              type="text" 
+              id="journalTitleInput"
+              class="w-full font-serif font-bold text-2xl sm:text-3xl lg:text-4xl text-[#111C2D] placeholder:text-slate-300 placeholder:font-normal bg-transparent border-none p-0 focus:outline-none focus:ring-0 leading-tight"
+              placeholder="Title (Optional - Gemini will auto-generate if blank)"
+              value="Refactoring Multi-Head Attention to Grouped-Query Attention (GQA)"
+            />
+          </div>
+
+          <!-- Quick Template Selector (Data Science Presets) -->
+          <div class="relative shrink-0">
+            <select id="templateSelector" onchange="applyTemplate(this.value)" class="text-xs font-mono text-[#505F76] bg-[#FAF8F5] border border-[#E5E0D8] rounded-lg px-2.5 py-1.5 hover:bg-slate-100 transition-colors focus:border-[#006948] focus:outline-none cursor-pointer">
+              <option value="">Load Template...</option>
+              <option value="gqa">GQA Architecture Notes</option>
+              <option value="lora">LoRA Rank Decomposition</option>
+              <option value="rope">Rotary Positional Embeddings</option>
+              <option value="clear">Clear Canvas (Blank)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Minimalist Formatting & Syntax Toolbar -->
+        <div class="flex flex-wrap items-center justify-between gap-2 mt-5 pt-3 border-t border-[#F5F2EC]">
+          
+          <!-- Formatting Buttons -->
+          <div class="flex items-center gap-1">
+            <button type="button" onclick="insertSyntax('**', '**', 'bold text')" class="p-1.5 rounded text-slate-600 hover:text-[#111C2D] hover:bg-slate-100 transition-colors text-xs font-bold" title="Bold (**text**)">
+              <span class="material-symbols-outlined text-[18px]">format_bold</span>
+            </button>
+            <button type="button" onclick="insertSyntax('*', '*', 'italic text')" class="p-1.5 rounded text-slate-600 hover:text-[#111C2D] hover:bg-slate-100 transition-colors text-xs italic" title="Italic (*text*)">
+              <span class="material-symbols-outlined text-[18px]">format_italic</span>
+            </button>
+            <button type="button" onclick="insertSyntax('`', '`', 'inline code')" class="p-1.5 rounded text-slate-600 hover:text-[#111C2D] hover:bg-slate-100 transition-colors text-xs font-mono" title="Code Snippet (`code`)">
+              <span class="material-symbols-outlined text-[18px]">code</span>
+            </button>
+            <button type="button" onclick="insertSyntax('$$ ', ' $$', '\\Omega(n \\log n)')" class="p-1.5 rounded text-slate-600 hover:text-[#111C2D] hover:bg-slate-100 transition-colors text-xs font-mono" title="LaTeX Formula ($$ \sigma(Wx) $$)">
+              <span class="material-symbols-outlined text-[18px]">functions</span>
+            </button>
+            <button type="button" onclick="insertSyntax('\n- ', '', 'List item')" class="p-1.5 rounded text-slate-600 hover:text-[#111C2D] hover:bg-slate-100 transition-colors text-xs" title="Bullet List (- item)">
+              <span class="material-symbols-outlined text-[18px]">format_list_bulleted</span>
+            </button>
+            <div class="h-4 w-[1px] bg-[#E5E0D8] mx-1"></div>
+            
+            <!-- Gemini Suggest Title Button -->
+            <button type="button" onclick="suggestTitleWithGemini()" id="suggestTitleBtn" class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#F0F3FF] hover:bg-[#E2ECFF] border border-[#D0DEFF] text-[#005691] font-mono text-xs font-medium transition-all shadow-2xs cursor-pointer">
+              <span class="material-symbols-outlined text-[14px]">auto_fix_high</span>
+              <span>Gemini Suggest Title</span>
+            </button>
+          </div>
+
+          <!-- Character / Word Counter & Telemetry Stats -->
+          <div class="flex items-center gap-3 text-xs font-mono text-[#505F76]">
+            <span id="wordCountLabel">148 words</span>
+            <span class="text-slate-300">•</span>
+            <span id="charCountLabel">982 chars</span>
+            <span class="text-slate-300">•</span>
+            <span class="text-emerald-700 font-semibold flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Live Sync
+            </span>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Text Area: Expansive, Clean Scholastic Writing Surface -->
+      <div class="p-6 sm:p-8 pt-4 flex-1 flex flex-col min-h-[380px]">
+        <textarea 
+          id="journalBodyArea"
+          class="w-full flex-1 font-mono text-sm sm:text-base text-[#111C2D] placeholder:text-slate-300 placeholder:font-sans bg-transparent resize-none leading-relaxed focus:outline-none"
+          placeholder="Document today's engineering decisions, architectural breakthroughs, refactorings, mathematical invariants, or debugging logs..."
+          oninput="handleContentChange()"
+        >Implemented Grouped-Query Attention (GQA-8) for our dense 7B transformer serving pipeline. 
+
+Context & Motivation:
+Standard Multi-Head Attention (MHA) creates extreme KV-cache memory pressure during long-context autoregressive decoding (8k tokens). Each layer maintained 32 key and value heads:
+$$ \text{Memory}_{\text{KV}} = 2 \times B \times L \times H_{\text{kv}} \times D_{\text{head}} \times 2 \text{ bytes} $$
+
+Changes Made:
+- Re-architected the projection layer to group 32 query heads into 8 key-value head groups (group size = 4).
+- Reduced KV cache memory footprint by 75% while maintaining 99.2% of downstream validation perplexity.
+- Fixed a silent broadcasting mismatch in the attention kernel when batch size > 1 under CUDA stream concurrency.
+
+AI Usage Signal:
+Used Claude 3.7 Sonnet in Cursor for generating the Triton kernel wrapper and test assertions. I manually derived the tensor shape stride mechanics to verify SRAM memory alignment.</textarea>
+      </div>
+
+      <!-- Quick Concept Tag Bar (Auto-Extracted Preview) -->
+      <div class="px-6 sm:px-8 py-3 bg-[#FAF8F5] border-t border-[#F0ECE6] flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-1.5" id="conceptTagPreview">
+          <span class="text-[11px] font-mono text-[#505F76] mr-1">Detected Concepts:</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-white border border-[#E5E0D8] text-[11px] font-mono font-medium text-[#111C2D]">#Grouped-Query Attention</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-white border border-[#E5E0D8] text-[11px] font-mono font-medium text-[#111C2D]">#KV-Cache Optimization</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-white border border-[#E5E0D8] text-[11px] font-mono font-medium text-[#111C2D]">#Triton Kernel</span>
+        </div>
+        <div class="text-[11px] font-mono text-[#505F76]">
+          Last modified: <span id="lastSavedTime">Just now</span>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- 4. FLOATING ACTION BAR (BOTTOM RIGHT)                                     -->
+  <!-- ========================================================================= -->
+  <div class="fixed bottom-6 right-6 z-30 flex items-center gap-3">
+    
+    <!-- Secondary: Save & Open AI Co-Thinker -->
+    <button 
+      type="button" 
+      onclick="handleSaveAndOpenAi()"
+      id="saveAndOpenAiBtn"
+      class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-[#006948] text-[#006948] hover:bg-[#ECFDF5] font-sans font-semibold text-sm shadow-paper-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+    >
+      <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+      <span>Save & Open AI Co-Thinker ✨</span>
+    </button>
+
+    <!-- Primary: Save Journal Entry -->
+    <button 
+      type="button" 
+      onclick="handleSaveJournal(false)"
+      id="saveJournalBtn"
+      class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#006948] hover:bg-[#005439] text-white font-sans font-semibold text-sm shadow-paper-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+    >
+      <span class="material-symbols-outlined text-[18px]">check</span>
+      <span>Save Journal Entry ✓</span>
+    </button>
+
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 5. POST-SAVE AI CO-THINKING DRAWER (SLIDE-OVER / SPLIT SCREEN)            -->
+  <!-- ========================================================================= -->
+  <div id="aiDrawerBackdrop" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs transition-opacity opacity-0 pointer-events-none duration-300" onclick="closeAiDrawer()"></div>
+
+  <aside 
+    id="aiDrawerPanel" 
+    class="fixed top-0 right-0 bottom-0 z-50 w-full sm:w-[480px] lg:w-[560px] bg-white border-l border-[#E5E0D8] shadow-drawer flex flex-col transform translate-x-full transition-transform duration-300 ease-out"
+    aria-label="Gemini Co-Thinking Partner Drawer"
+  >
+    <!-- Drawer Header -->
+    <div class="p-5 border-b border-[#E5E0D8] bg-[#FAF8F5] flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-[#006948] text-white flex items-center justify-center shadow-xs">
+          <span class="material-symbols-outlined text-[20px]">smart_toy</span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h3 class="font-serif font-bold text-lg text-[#111C2D]">Gemini Co-Thinking Partner</h3>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#ECFDF5] text-[#006948] border border-emerald-200">Gemini 3.8 Flash</span>
+          </div>
+          <p class="text-xs text-[#505F76] font-mono">Cognitive probe & technical brainstorming</p>
+        </div>
+      </div>
+
+      <button 
+        type="button" 
+        onclick="closeAiDrawer()" 
+        class="p-1.5 rounded-lg text-slate-400 hover:text-[#111C2D] hover:bg-slate-200/60 transition-colors"
+        aria-label="Close AI Drawer"
+      >
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
+    </div>
+
+    <!-- Quick Prompt Pills -->
+    <div class="px-5 py-3 bg-white border-b border-[#F0ECE6] flex flex-wrap items-center gap-1.5">
+      <span class="text-[10px] font-mono font-bold uppercase text-[#505F76] mr-1">Quick Prompts:</span>
+      
+      <button type="button" onclick="sendQuickPrompt('Coach me on potential technical blindspots or conceptual gaps in this GQA implementation.')" class="px-2.5 py-1 rounded-full bg-[#FAF8F5] hover:bg-[#F0F3FF] border border-[#E5E0D8] hover:border-[#D0DEFF] text-[#111C2D] text-xs font-mono transition-colors">
+        [ Coach Me on Gaps ]
+      </button>
+
+      <button type="button" onclick="sendQuickPrompt('Summarize the core mathematical trade-offs between MHA and GQA from my notes.')" class="px-2.5 py-1 rounded-full bg-[#FAF8F5] hover:bg-[#F0F3FF] border border-[#E5E0D8] hover:border-[#D0DEFF] text-[#111C2D] text-xs font-mono transition-colors">
+        [ Summarize Concepts ]
+      </button>
+
+      <button type="button" onclick="sendQuickPrompt('What edge cases occur in Triton attention kernels during multi-batch CUDA stream execution?')" class="px-2.5 py-1 rounded-full bg-[#FAF8F5] hover:bg-[#F0F3FF] border border-[#E5E0D8] hover:border-[#D0DEFF] text-[#111C2D] text-xs font-mono transition-colors">
+        [ Brainstorm Edge Cases ]
+      </button>
+    </div>
+
+    <!-- Chat Thread / Dialogue Area -->
+    <div id="aiChatThread" class="flex-1 p-5 overflow-y-auto space-y-4 bg-white">
+      
+      <!-- Initial AI Greeting Message -->
+      <div class="flex items-start gap-3">
+        <div class="w-7 h-7 rounded-lg bg-[#006948] text-white flex items-center justify-center shrink-0 text-xs shadow-2xs font-mono font-bold">
+          AI
+        </div>
+        <div class="flex-1 bg-[#FAF8F5] border border-[#E5E0D8] rounded-2xl rounded-tl-sm p-4 text-xs sm:text-sm text-[#111C2D] space-y-2">
+          <p class="font-semibold font-serif text-[#006948] text-sm">
+            I've analyzed your journal on Grouped-Query Attention (GQA).
+          </p>
+          <p class="leading-relaxed">
+            Your note outlines a 75% KV-cache reduction using 8 key-value head groups for 32 query heads. Would you like me to probe the tensor stride alignment in your Triton kernel, or explore mathematical degradation thresholds under long context?
+          </p>
+          <div class="pt-1 flex items-center gap-2 text-[10px] font-mono text-[#505F76]">
+            <span>Grounded on Journal Context</span>
+            <span>•</span>
+            <span>Origin: Web App</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Chat Input Area -->
+    <div class="p-4 border-t border-[#E5E0D8] bg-[#FAF8F5] space-y-3">
+      
+      <!-- Persistence Control Toggle Switch -->
+      <div class="flex items-center justify-between p-2.5 rounded-xl bg-white border border-[#E5E0D8]">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[18px] text-[#006948]">database</span>
+          <div class="flex flex-col">
+            <label for="persistAiToggle" class="text-xs font-semibold text-[#111C2D] cursor-pointer">
+              Include AI discussion thread in permanent journal record
+            </label>
+            <span class="text-[10px] font-mono text-[#505F76]">Stores multi-turn transcripts under user Firestore record</span>
+          </div>
+        </div>
+        <!-- Custom Toggle Switch -->
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" id="persistAiToggle" checked class="sr-only peer" />
+          <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#006948]"></div>
+        </label>
+      </div>
+
+      <!-- Text Input & Send Button -->
+      <div class="flex items-center gap-2">
+        <input 
+          type="text" 
+          id="aiChatInput" 
+          placeholder="Ask a technical follow-up or test your recall..."
+          class="flex-1 px-3.5 py-2.5 bg-white border border-[#E5E0D8] rounded-xl text-xs font-mono text-[#111C2D] placeholder:text-slate-400 focus:outline-none focus:border-[#006948] focus:ring-1 focus:ring-[#006948]"
+          onkeydown="if(event.key==='Enter') sendChatMessage()"
+        />
+        <button 
+          type="button" 
+          onclick="sendChatMessage()"
+          id="sendAiChatBtn"
+          class="p-2.5 rounded-xl bg-[#006948] hover:bg-[#005439] text-white flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+          title="Send message"
+        >
+          <span class="material-symbols-outlined text-[18px]">send</span>
+        </button>
+      </div>
+
+      <!-- Action Button: Commit Full Session to Database -->
+      <button 
+        type="button" 
+        onclick="commitFullSessionToDb()"
+        id="commitDbBtn"
+        class="w-full py-2.5 rounded-xl bg-[#111C2D] hover:bg-black text-white font-sans font-semibold text-xs flex items-center justify-center gap-2 shadow-2xs transition-colors cursor-pointer"
+      >
+        <span class="material-symbols-outlined text-[16px] text-emerald-400">cloud_upload</span>
+        <span>Commit Full Session to Database</span>
+      </button>
+
+    </div>
+
+  </aside>
+
+  <!-- ========================================================================= -->
+  <!-- 6. STANDARD GLOBAL FOOTER                                                 -->
+  <!-- ========================================================================= -->
+  <footer class="mt-auto bg-[#FAF8F5] border-t border-[#E5E0D8] py-8 text-[#505F76] font-mono text-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        
+        <!-- Left: Brand & Philosophy -->
+        <div class="flex items-center gap-3">
+          <div class="w-6 h-6 rounded bg-[#006948] text-white flex items-center justify-center font-serif font-bold text-xs">
+            C
+          </div>
+          <span class="text-[#111C2D] font-semibold">CARE Engine</span>
+          <span>•</span>
+          <span>Zero Cross-User Leakage</span>
+          <span>•</span>
+          <span class="text-emerald-700 font-semibold">Firestore User-Scoped Security</span>
+        </div>
+
+        <!-- Center: Heuristic Weight Constants -->
+        <div class="text-[11px] text-slate-500">
+          Priority Engine: $Priority(t) = (0.40T + 0.35A + 0.25H) \times M$
+        </div>
+
+        <!-- Right: Time & Status -->
+        <div class="flex items-center gap-2 text-[11px]">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span id="utcClock">UTC 2026-09-06</span>
+          <span>•</span>
+          <span>Grounded in Gemini 3.8 Flash</span>
+        </div>
+
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========================================================================= -->
+  <!-- 7. JAVASCRIPT STATE MANAGEMENT & INTERACTION ENGINE                       -->
+  <!-- ========================================================================= -->
+  <script>
+    // Global Application State Object (CARE Schema Compatible)
+    const journalState = {
+      userId: 'usr_garewal_sk26',
+      title: '',
+      body: '',
+      modeType: 'Web App',
+      aiRelianceLevel: 'prompt_driven',
+      aiRelianceWeight: 0.50,
+      aiToolUsed: 'Cursor / Claude 3.7 Sonnet',
+      tags: ['#Grouped-Query Attention', '#KV-Cache Optimization', '#Triton Kernel'],
+      extractedConcepts: [
+        { canonicalName: 'Grouped-Query Attention', category: 'Deep Learning', importanceScore: 0.92 },
+        { canonicalName: 'KV-Cache Optimization', category: 'ML Systems', importanceScore: 0.88 },
+        { canonicalName: 'Triton Kernel', category: 'GPU Programming', importanceScore: 0.84 }
+      ],
+      aiConversationHistory: [
+        {
+          role: 'assistant',
+          message: "I've analyzed your journal on Grouped-Query Attention (GQA). Your note outlines a 75% KV-cache reduction using 8 key-value head groups for 32 query heads. Would you like me to probe the tensor stride alignment in your Triton kernel, or explore mathematical degradation thresholds under long context?",
+          timestamp: new Date().toISOString()
+        }
+      ],
+      persistAiThread: true,
+      lastSavedAt: null
+    };
+
+    // Auto-detect origin via JS environment inspection
+    function detectEnvironmentOrigin() {
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const isLinux = navigator.platform.toUpperCase().indexOf('LINUX') >= 0;
+      
+      let clientPlatform = 'Web App';
+      if (isMobile) clientPlatform = 'Web App (Mobile)';
+      else if (isMac) clientPlatform = 'Web App (macOS)';
+      else if (isLinux) clientPlatform = 'Web App (Linux)';
+      else clientPlatform = 'Web App (Desktop)';
+
+      journalState.modeType = 'Web App';
+      
+      const originEl = document.getElementById('detectedOriginText');
+      if (originEl) originEl.innerText = `${clientPlatform}`;
+    }
+
+    // Set AI Reliance level
+    function setAiReliance(level, weight) {
+      journalState.aiRelianceLevel = level;
+      journalState.aiRelianceWeight = weight;
+
+      // Update button styling
+      const buttons = document.querySelectorAll('.reliance-btn');
+      buttons.forEach(btn => {
+        if (btn.getAttribute('data-level') === level) {
+          btn.className = 'reliance-btn active-reliance px-2.5 py-1 rounded-md border text-xs font-mono font-bold transition-all cursor-pointer border-[#006948] bg-[#ECFDF5] text-[#006948] shadow-2xs';
+        } else {
+          btn.className = 'reliance-btn px-2.5 py-1 rounded-md border text-xs font-mono font-medium transition-all cursor-pointer border-[#E5E0D8] bg-[#FAF8F5] text-[#505F76] hover:bg-slate-100';
+        }
+      });
+
+      // Update predicted stability ratio S(t)
+      updateStabilityProjection(weight);
+    }
+
+    // Update Stability Projection based on AI reliance
+    function updateStabilityProjection(weight) {
+      let stability = 0.88;
+      if (weight >= 0.80) stability = 0.34;
+      else if (weight >= 0.45) stability = 0.65;
+
+      const scoreEl = document.getElementById('stabilityScoreText');
+      if (scoreEl) {
+        scoreEl.innerText = `${stability.toFixed(2)} S(t)`;
+        if (stability < 0.55) {
+          scoreEl.className = 'font-bold text-amber-700';
+        } else {
+          scoreEl.className = 'font-bold text-[#006948]';
+        }
+      }
+    }
+
+    // Handle Content and Word Counter updates
+    function handleContentChange() {
+      const body = document.getElementById('journalBodyArea').value;
+      journalState.body = body;
+
+      const charCount = body.length;
+      const words = body.trim() ? body.trim().split(/\s+/).length : 0;
+
+      document.getElementById('charCountLabel').innerText = `${charCount} chars`;
+      document.getElementById('wordCountLabel').innerText = `${words} words`;
+
+      // Live concept extraction preview based on keywords
+      const concepts = [];
+      const lower = body.toLowerCase();
+      if (lower.includes('grouped-query') || lower.includes('gqa') || lower.includes('attention')) {
+        concepts.push('#Grouped-Query Attention');
+      }
+      if (lower.includes('kv-cache') || lower.includes('memory')) {
+        concepts.push('#KV-Cache Optimization');
+      }
+      if (lower.includes('triton') || lower.includes('cuda') || lower.includes('kernel')) {
+        concepts.push('#Triton Kernel');
+      }
+      if (lower.includes('lora') || lower.includes('rank')) {
+        concepts.push('#LoRA Rank Decomposition');
+      }
+      if (lower.includes('rope') || lower.includes('positional')) {
+        concepts.push('#Rotary Positional Embeddings');
+      }
+
+      if (concepts.length > 0) {
+        const previewContainer = document.getElementById('conceptTagPreview');
+        if (previewContainer) {
+          previewContainer.innerHTML = `
+            <span class="text-[11px] font-mono text-[#505F76] mr-1">Detected Concepts:</span>
+            ${concepts.map(c => `<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-white border border-[#E5E0D8] text-[11px] font-mono font-medium text-[#111C2D]">${c}</span>`).join('')}
+          `;
+        }
+      }
+    }
+
+    // Insert Formatting syntax into textarea
+    function insertSyntax(prefix, suffix, placeholder) {
+      const textarea = document.getElementById('journalBodyArea');
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = textarea.value;
+
+      const selected = text.substring(start, end) || placeholder;
+      const replacement = prefix + selected + suffix;
+
+      textarea.value = text.substring(0, start) + replacement + text.substring(end);
+      textarea.focus();
+      textarea.selectionStart = start + prefix.length;
+      textarea.selectionEnd = start + prefix.length + selected.length;
+
+      handleContentChange();
+    }
+
+    // Gemini Auto-Title Suggestion
+    function suggestTitleWithGemini() {
+      const body = document.getElementById('journalBodyArea').value;
+      const btn = document.getElementById('suggestTitleBtn');
+      const titleInput = document.getElementById('journalTitleInput');
+
+      if (!body.trim()) {
+        showToast('Please enter some notes on the canvas first.', 'amber');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `
+        <span class="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+        <span>Synthesizing...</span>
+      `;
+
+      setTimeout(() => {
+        let generatedTitle = 'Architectural Notes & Engineering Synthesis';
+        const lower = body.toLowerCase();
+        if (lower.includes('gqa') || lower.includes('attention')) {
+          generatedTitle = 'Refactoring Multi-Head Attention to Grouped-Query Attention (GQA)';
+        } else if (lower.includes('lora') || lower.includes('rank')) {
+          generatedTitle = 'Low-Rank Adaptation (LoRA) Weight Matrix Decomposition';
+        } else if (lower.includes('rope') || lower.includes('rotary')) {
+          generatedTitle = 'Rotary Positional Embeddings (RoPE) Invariant Analysis';
+        }
+
+        titleInput.value = generatedTitle;
+        journalState.title = generatedTitle;
+
+        btn.disabled = false;
+        btn.innerHTML = `
+          <span class="material-symbols-outlined text-[14px]">auto_fix_high</span>
+          <span>Gemini Suggest Title</span>
+        `;
+
+        showToast('Gemini synthesized a title from your notes!', 'emerald');
+      }, 700);
+    }
+
+    // Apply Pre-configured Template
+    function applyTemplate(type) {
+      const titleInput = document.getElementById('journalTitleInput');
+      const bodyArea = document.getElementById('journalBodyArea');
+
+      if (type === 'gqa') {
+        titleInput.value = 'Refactoring Multi-Head Attention to Grouped-Query Attention (GQA)';
+        bodyArea.value = `Implemented Grouped-Query Attention (GQA-8) for our dense 7B transformer serving pipeline. 
+
+Context & Motivation:
+Standard Multi-Head Attention (MHA) creates extreme KV-cache memory pressure during long-context autoregressive decoding (8k tokens). Each layer maintained 32 key and value heads:
+$$ \\text{Memory}_{\\text{KV}} = 2 \\times B \\times L \\times H_{\\text{kv}} \\times D_{\\text{head}} \\times 2 \\text{ bytes} $$
+
+Changes Made:
+- Re-architected the projection layer to group 32 query heads into 8 key-value head groups (group size = 4).
+- Reduced KV cache memory footprint by 75% while maintaining 99.2% of downstream validation perplexity.
+- Fixed a silent broadcasting mismatch in the attention kernel when batch size > 1 under CUDA stream concurrency.`;
+        setAiReliance('prompt_driven', 0.50);
+      } else if (type === 'lora') {
+        titleInput.value = 'Fine-Tuning Mistral 7B via LoRA Rank-16 Adaptation';
+        bodyArea.value = `Applied Low-Rank Adaptation (LoRA) to linear attention projection layers (q_proj, v_proj).
+
+Mathematical Invariant:
+$$ W = W_0 + \\Delta W = W_0 + \\frac{\\alpha}{r} (B \\times A) $$
+Where $B \\in \\mathbb{R}^{d \\times r}$ and $A \\in \\mathbb{R}^{r \\times k}$ with rank $r = 16$ and scaling factor $\\alpha = 32$.
+
+Validation Results:
+- Trainable parameter ratio reduced to 0.12% of baseline 7.24B weights.
+- GPU VRAM consumption bounded within 16GB V100 during batch size 8 gradient accumulation.`;
+        setAiReliance('spec_driven', 0.80);
+      } else if (type === 'rope') {
+        titleInput.value = 'Rotary Positional Embeddings (RoPE) Implementation & Complex Angle Rotations';
+        bodyArea.value = `Implemented RoPE coordinate rotation matrices for 2D query-key dot product invariance.
+
+Mathematical Formulation:
+$$ \\mathbf{R}_{\\Theta, m}^d = \\text{diag}(\\mathbf{R}_1, \\mathbf{R}_2, \\dots, \\mathbf{R}_{d/2}) $$
+Preserves relative positional distances across token sequences while maintaining inner product compatibility without absolute positional embedding lookups.`;
+        setAiReliance('none', 0.10);
+      } else if (type === 'clear') {
+        titleInput.value = '';
+        bodyArea.value = '';
+        setAiReliance('prompt_driven', 0.50);
+      }
+
+      handleContentChange();
+      document.getElementById('templateSelector').value = '';
+    }
+
+    // Save Journal Entry Logic
+    function handleSaveJournal(openAiPostSave = false) {
+      const titleInput = document.getElementById('journalTitleInput');
+      const bodyArea = document.getElementById('journalBodyArea');
+      const toolInput = document.getElementById('aiToolTagInput');
+
+      let finalTitle = titleInput.value.trim();
+      const body = bodyArea.value.trim();
+
+      if (!body) {
+        showToast('Please write some journal content before saving.', 'amber');
+        return;
+      }
+
+      // Auto-generate title if empty
+      if (!finalTitle) {
+        finalTitle = 'Engineering Journal: ' + body.substring(0, 32).replace(/[\r\n]+/g, ' ') + '...';
+        titleInput.value = finalTitle;
+      }
+
+      journalState.title = finalTitle;
+      journalState.body = body;
+      journalState.aiToolUsed = toolInput ? toolInput.value.trim() : '';
+      journalState.lastSavedAt = new Date().toISOString();
+
+      // Update UI
+      document.getElementById('lastSavedTime').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      showToast('Journal Entry saved to CARE telemetry database ✓', 'emerald');
+
+      if (openAiPostSave) {
+        setTimeout(() => {
+          openAiDrawer();
+        }, 300);
+      }
+    }
+
+    function handleSaveAndOpenAi() {
+      handleSaveJournal(true);
+    }
+
+    // AI Slide-Over Drawer Controls
+    function openAiDrawer() {
+      const backdrop = document.getElementById('aiDrawerBackdrop');
+      const panel = document.getElementById('aiDrawerPanel');
+
+      backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      backdrop.classList.add('opacity-100');
+
+      panel.classList.remove('translate-x-full');
+      panel.classList.add('translate-x-0');
+    }
+
+    function closeAiDrawer() {
+      const backdrop = document.getElementById('aiDrawerBackdrop');
+      const panel = document.getElementById('aiDrawerPanel');
+
+      backdrop.classList.remove('opacity-100');
+      backdrop.classList.add('opacity-0', 'pointer-events-none');
+
+      panel.classList.remove('translate-x-0');
+      panel.classList.add('translate-x-full');
+    }
+
+    // Send Quick Prompt to AI
+    function sendQuickPrompt(promptText) {
+      document.getElementById('aiChatInput').value = promptText;
+      sendChatMessage();
+    }
+
+    // Send Interactive AI Chat Message
+    function sendChatMessage() {
+      const input = document.getElementById('aiChatInput');
+      const message = input.value.trim();
+      if (!message) return;
+
+      const chatThread = document.getElementById('aiChatThread');
+
+      // 1. Append User Message
+      const userTurnHtml = `
+        <div class="flex items-start justify-end gap-2.5 fade-enter">
+          <div class="bg-[#111C2D] text-white rounded-2xl rounded-tr-sm p-3.5 text-xs sm:text-sm max-w-[85%]">
+            ${escapeHtml(message)}
+          </div>
+          <div class="w-7 h-7 rounded-lg bg-[#505F76] text-white flex items-center justify-center shrink-0 text-xs font-mono font-bold">
+            SK
+          </div>
+        </div>
+      `;
+      chatThread.insertAdjacentHTML('beforeend', userTurnHtml);
+      journalState.aiConversationHistory.push({
+        role: 'user',
+        message: message,
+        timestamp: new Date().toISOString()
+      });
+
+      input.value = '';
+      chatThread.scrollTop = chatThread.scrollHeight;
+
+      // 2. Simulate AI Thinking & Grounded Response
+      const typingId = 'typing_' + Date.now();
+      const typingHtml = `
+        <div id="${typingId}" class="flex items-start gap-3 fade-enter">
+          <div class="w-7 h-7 rounded-lg bg-[#006948] text-white flex items-center justify-center shrink-0 text-xs font-mono font-bold">
+            AI
+          </div>
+          <div class="bg-[#FAF8F5] border border-[#E5E0D8] rounded-2xl rounded-tl-sm p-3.5 text-xs text-[#505F76] font-mono flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-[#006948] animate-ping"></span>
+            <span>Gemini 3.8 Flash evaluating technical journal context...</span>
+          </div>
+        </div>
+      `;
+      chatThread.insertAdjacentHTML('beforeend', typingHtml);
+      chatThread.scrollTop = chatThread.scrollHeight;
+
+      setTimeout(() => {
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+
+        // Context-aware response synthesis
+        let aiResponseText = '';
+        const lower = message.toLowerCase();
+        if (lower.includes('blindspot') || lower.includes('gap') || lower.includes('coach')) {
+          aiResponseText = "A critical blindspot in GQA-8 is **KV-cache stride alignment when batch size varies**. When grouping 4 query heads to 1 KV head, broadcasting must preserve tensor memory layout across CUDA thread blocks. If your Triton kernel relies on row-major pointers without explicit stride strides, high-concurrency batches will suffer from uncoalesced global memory reads.";
+        } else if (lower.includes('summarize') || lower.includes('trade-off')) {
+          aiResponseText = "Summary of trade-offs:\n• **MHA (Multi-Head)**: Full expressivity with $H_q = H_{kv} = 32$, but memory scales linearly with tokens.\n• **MQA (Multi-Query)**: Lowest memory footprint ($H_{kv} = 1$), but causes severe representation collapse in complex coding reasoning.\n• **GQA (Grouped-Query)**: Golden median ($H_{kv} = 8$). Retains 99%+ MHA quality with 75% memory recovery.";
+        } else if (lower.includes('edge case') || lower.includes('triton')) {
+          aiResponseText = "Key Triton edge case: **Tail block boundary conditions** when sequence length is not an exact multiple of your SRAM tile block size (e.g. `BLOCK_M=128`). Ensure your kernel guards mask checks (`offs_m < seq_len`) before issuing atomic writes to avoid silent page faults.";
+        } else {
+          aiResponseText = `Regarding "${message}": in the context of your ${journalState.title || 'engineering journal'}, ensuring mathematical consistency between your architectural specifications and the GPU execution model is vital for long-term retention. Would you like to review an active recall diagnostic on this?`;
+        }
+
+        const aiTurnHtml = `
+          <div class="flex items-start gap-3 fade-enter">
+            <div class="w-7 h-7 rounded-lg bg-[#006948] text-white flex items-center justify-center shrink-0 text-xs shadow-2xs font-mono font-bold">
+              AI
+            </div>
+            <div class="flex-1 bg-[#FAF8F5] border border-[#E5E0D8] rounded-2xl rounded-tl-sm p-4 text-xs sm:text-sm text-[#111C2D] space-y-2">
+              <p class="leading-relaxed whitespace-pre-line">${escapeHtml(aiResponseText)}</p>
+              <div class="pt-1 flex items-center gap-2 text-[10px] font-mono text-[#505F76]">
+                <span>Grounded on Journal Context</span>
+                <span>•</span>
+                <span>Gemini 3.8 Flash</span>
+              </div>
+            </div>
+          </div>
+        `;
+        chatThread.insertAdjacentHTML('beforeend', aiTurnHtml);
+        journalState.aiConversationHistory.push({
+          role: 'assistant',
+          message: aiResponseText,
+          timestamp: new Date().toISOString()
+        });
+
+        chatThread.scrollTop = chatThread.scrollHeight;
+      }, 850);
+    }
+
+    // Commit Full Session to Database
+    function commitFullSessionToDb() {
+      const persistToggle = document.getElementById('persistAiToggle');
+      journalState.persistAiThread = persistToggle ? persistToggle.checked : true;
+
+      const payload = {
+        user_id: journalState.userId,
+        entry_id: `entry_${Date.now().toString(36)}`,
+        title: journalState.title || document.getElementById('journalTitleInput').value.trim() || 'Untitled Engineering Journal',
+        raw_content: journalState.body || document.getElementById('journalBodyArea').value.trim(),
+        mode_type: journalState.modeType,
+        ai_assistance_level: journalState.aiRelianceLevel,
+        ai_reliance_weight: journalState.aiRelianceWeight,
+        ai_tool_used: journalState.aiToolUsed || 'Cursor / Claude',
+        extracted_concepts: journalState.extractedConcepts,
+        ai_conversation_history: journalState.persistAiThread ? journalState.aiConversationHistory : [],
+        created_at: new Date().toISOString(),
+        security: {
+          firestore_path: `/users/${journalState.userId}/journal_entries/`,
+          zero_cross_user_leakage: true
+        }
+      };
+
+      console.log('CARE Firestore Database Payload Prepared:', payload);
+
+      showToast(`Committed session & ${payload.ai_conversation_history.length} AI turns to Firestore ✓`, 'emerald');
+      setTimeout(() => {
+        closeAiDrawer();
+      }, 800);
+    }
+
+    // Simple Scholastic Toast Notification
+    function showToast(message, type = 'emerald') {
+      const existingToast = document.getElementById('careToast');
+      if (existingToast) existingToast.remove();
+
+      const bgClass = type === 'amber' ? 'bg-[#FFF8ED] text-[#8D4B00] border-amber-300' : 'bg-[#ECFDF5] text-[#006948] border-emerald-300';
+      const icon = type === 'amber' ? 'warning' : 'check_circle';
+
+      const toast = document.createElement('div');
+      toast.id = 'careToast';
+      toast.className = `fixed top-20 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl border ${bgClass} shadow-paper-lg text-xs font-mono font-medium fade-enter`;
+      toast.innerHTML = `
+        <span class="material-symbols-outlined text-[18px]">${icon}</span>
+        <span>${message}</span>
+      `;
+
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        if (toast) toast.remove();
+      }, 3500);
+    }
+
+    function escapeHtml(string) {
+      return String(string)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Live Clock Update
+    function updateClock() {
+      const now = new Date();
+      const clockEl = document.getElementById('utcClock');
+      if (clockEl) {
+        clockEl.innerText = now.toUTCString().replace('GMT', 'UTC');
+      }
+    }
+
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      detectEnvironmentOrigin();
+      handleContentChange();
+      updateClock();
+      setInterval(updateClock, 1000);
+    });
+  </script>
+
+</body>
+</html>

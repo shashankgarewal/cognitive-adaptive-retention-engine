@@ -20,6 +20,9 @@ BANNED_MOCK_UIDS = {
     "test_user",
 }
 
+# Authoritative target project ID for token verification
+TARGET_PROJECT_ID = "care-recall"
+
 
 async def verify_firebase_token(
     authorization: Optional[str] = Header(None)
@@ -66,6 +69,17 @@ async def verify_firebase_token(
 
         # Verify the ID token using Firebase Admin
         decoded_token = auth.verify_id_token(id_token, check_revoked=True)
+
+        # Ensure token belongs specifically to the 'care-recall' project
+        token_aud = decoded_token.get("aud")
+        token_iss = decoded_token.get("iss", "")
+        if token_aud != TARGET_PROJECT_ID and not token_iss.endswith(f"/{TARGET_PROJECT_ID}"):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Token verification failed: token project audience '{token_aud}' does not match required project '{TARGET_PROJECT_ID}'.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         uid = decoded_token.get("uid")
         if not uid or not isinstance(uid, str) or not uid.strip():
             raise HTTPException(

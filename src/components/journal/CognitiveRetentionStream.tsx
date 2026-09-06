@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BookOpen,
   Share2,
@@ -14,12 +15,12 @@ import {
   Sliders,
   Filter,
   Layers,
+  X,
 } from 'lucide-react';
 import { JournalEntry, TopicRetentionState, ExtractedConcept } from '../../types';
 import { ZeroStateHeader } from '../dashboard/ZeroStateHeader';
 import { ZeroStateBlueprintPanel } from '../dashboard/ZeroStateBlueprintPanel';
 import { JournalStreamCard } from './JournalStreamCard';
-import { JournalEntryForm } from './JournalEntryForm';
 import { useAuth } from '../../context/AuthContext';
 
 interface CognitiveRetentionStreamProps {
@@ -44,9 +45,9 @@ export const CognitiveRetentionStream: React.FC<CognitiveRetentionStreamProps> =
   onToggleToZeroState,
 }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'high_ai' | 'decay_flagged'>('all');
-  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [isBlueprintOpen, setIsBlueprintOpen] = useState(true);
 
   // Progressive scroll loading state
@@ -139,14 +140,7 @@ export const CognitiveRetentionStream: React.FC<CognitiveRetentionStreamProps> =
       onOpenAuth();
       return;
     }
-    setIsLogModalOpen(true);
-  };
-
-  const handleJournalSuccess = (entry: JournalEntry, concepts: ExtractedConcept[]) => {
-    setIsLogModalOpen(false);
-    if (onLogSuccess) {
-      onLogSuccess(entry, concepts);
-    }
+    navigate('/journal/editor');
   };
 
   return (
@@ -497,14 +491,6 @@ export const CognitiveRetentionStream: React.FC<CognitiveRetentionStreamProps> =
           </div>
         </div>
       </footer>
-
-      {/* Journal Entry Form Modal */}
-      {isLogModalOpen && (
-        <JournalEntryForm
-          onClose={() => setIsLogModalOpen(false)}
-          onSuccess={handleJournalSuccess}
-        />
-      )}
     </div>
   );
 };

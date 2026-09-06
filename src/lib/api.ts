@@ -157,6 +157,21 @@ export const api = {
   },
 
   /**
+   * Subscribes to real-time user-specific journal entries from Cloud Firestore.
+   */
+  subscribeJournalEntries(
+    onUpdate: (entries: JournalEntry[], empty: boolean) => void,
+    onError?: (error: any) => void
+  ): () => void {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      onUpdate([], true);
+      return () => {};
+    }
+    return firestoreService.subscribeUserJournalEntries(currentUser.uid, onUpdate, onError);
+  },
+
+  /**
    * Retrieves user-specific journal entries from Cloud Firestore.
    */
   async getJournalEntries(): Promise<{ status: string; entries: JournalEntry[]; total: number }> {

@@ -124,7 +124,6 @@ export const RetentionHubPage: React.FC = () => {
 
   const [topics, setTopics] = useState<TopicRetentionState[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [isBlueprintOpen, setIsBlueprintOpen] = useState(false);
 
   // Search & Filter State
@@ -207,13 +206,6 @@ export const RetentionHubPage: React.FC = () => {
     setActiveRecallSession(null);
     setActiveRecallTopic(null);
     showToast('Recall session recorded! Retention scores calibrated.');
-    await refreshProfile();
-    await fetchTopics();
-  };
-
-  const handleJournalSuccess = async (entry: JournalEntry, concepts: ExtractedConcept[]) => {
-    setIsLogModalOpen(false);
-    showToast(`Journal logged! Extracted ${concepts.length} knowledge concepts.`);
     await refreshProfile();
     await fetchTopics();
   };
@@ -328,6 +320,13 @@ export const RetentionHubPage: React.FC = () => {
             </button>
             <button
               type="button"
+              onClick={() => navigate('/journal/editor')}
+              className="px-3.5 py-1.5 rounded-full text-[#64748B] hover:text-[#111C2D] hover:bg-white/80 transition-all cursor-pointer"
+            >
+              Journal Writer
+            </button>
+            <button
+              type="button"
               onClick={() => navigate('/hub')}
               className="px-3.5 py-1.5 rounded-full bg-[#006948] text-white font-semibold shadow-xs cursor-pointer"
             >
@@ -354,7 +353,7 @@ export const RetentionHubPage: React.FC = () => {
             <button
               id="btn-log-work-journal"
               type="button"
-              onClick={() => setIsLogModalOpen(true)}
+              onClick={() => navigate('/journal/editor')}
               className="py-1.5 px-3.5 rounded-lg bg-[#006948] hover:bg-[#005439] text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
@@ -690,7 +689,7 @@ export const RetentionHubPage: React.FC = () => {
             <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
               <button
                 type="button"
-                onClick={() => setIsLogModalOpen(true)}
+                onClick={() => navigate('/journal/editor')}
                 className="px-4 py-2 rounded-lg bg-[#006948] hover:bg-[#005439] text-white font-medium text-xs font-mono shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
@@ -1010,14 +1009,6 @@ export const RetentionHubPage: React.FC = () => {
             setActiveRecallSession(null);
             setActiveRecallTopic(null);
           }}
-        />
-      )}
-
-      {/* Journal Entry Form Modal */}
-      {isLogModalOpen && (
-        <JournalEntryForm
-          onClose={() => setIsLogModalOpen(false)}
-          onSuccess={handleJournalSuccess}
         />
       )}
     </div>

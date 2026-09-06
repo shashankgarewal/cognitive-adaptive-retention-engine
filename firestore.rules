@@ -1,21 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Enforce strict multi-tenant isolation under user path
+    // User root document
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
 
-      match /journal_entries/{entryId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-
-      match /topic_retention_states/{topicId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-
-      match /recall_sessions/{sessionId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
+    // All recursive subcollections under user path
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
     // Default deny everything else

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ZeroStateHeader } from '../dashboard/ZeroStateHeader';
 import { PipelineDiagramCard } from './PipelineDiagramCard';
 import { DeepDiveSpecGrid } from './DeepDiveSpecGrid';
 import { TelemetryTestHarness } from './TelemetryTestHarness';
-import { JournalEntryForm } from '../journal/JournalEntryForm';
 import { JournalEntry, ExtractedConcept } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -30,21 +30,14 @@ export const ArchitectureSpecPage: React.FC<ArchitectureSpecPageProps> = ({
   onLogSuccess,
 }) => {
   const { user } = useAuth();
-  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleLogClick = () => {
     if (!user && onOpenAuth) {
       onOpenAuth();
       return;
     }
-    setIsLogModalOpen(true);
-  };
-
-  const handleJournalSuccess = (entry: JournalEntry, concepts: ExtractedConcept[]) => {
-    setIsLogModalOpen(false);
-    if (onLogSuccess) {
-      onLogSuccess(entry, concepts);
-    }
+    navigate('/journal/editor');
   };
 
   return (
@@ -136,14 +129,6 @@ export const ArchitectureSpecPage: React.FC<ArchitectureSpecPageProps> = ({
           </div>
         </div>
       </footer>
-
-      {/* Journal Entry Modal */}
-      {isLogModalOpen && (
-        <JournalEntryForm
-          onClose={() => setIsLogModalOpen(false)}
-          onSuccess={handleJournalSuccess}
-        />
-      )}
     </div>
   );
 };

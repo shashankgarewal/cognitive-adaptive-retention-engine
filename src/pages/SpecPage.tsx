@@ -9,6 +9,7 @@ export const SpecPage: React.FC = () => {
     <ArchitectureSpecPage
       onSelectNav={(navId) => {
         if (navId === 'feed') navigate('/feed');
+        else if (navId === 'editor' || navId === 'writer') navigate('/journal/editor');
         else if (navId === 'hub') navigate('/hub');
         else if (navId === 'analytics') navigate('/analytics');
         else if (navId === 'spec') navigate('/spec');

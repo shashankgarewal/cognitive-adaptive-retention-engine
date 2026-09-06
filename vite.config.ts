@@ -1,8 +1,28 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig, Plugin} from 'vite';
-import firebaseConfig from './firebase-applet-config.json';
+import fs from 'fs';
+import { defineConfig, Plugin, loadEnv } from 'vite';
+import { GoogleGenAI } from '@google/genai';
+import { extractConceptsLocally, generateCoThinkingFallback } from './src/lib/aiService.ts';
+
+const safeEnv = { ...(typeof process !== 'undefined' ? process.env : {}), ...loadEnv('', process.cwd(), '') };
+const geminiApiKey = safeEnv.GEMINI_API_KEY || safeEnv.VITE_GEMINI_API_KEY;
+const genAI = geminiApiKey ? new GoogleGenAI({ apiKey: geminiApiKey }) : null;
+
+let firebaseConfig: any = {
+  projectId: safeEnv.GCP_PROJECT_ID || safeEnv.VITE_GCP_PROJECT_ID || 'care-recall',
+  firestoreDatabaseId: '(default)',
+};
+try {
+  const configPath = path.resolve(__dirname, 'firebase-applet-config.json');
+  if (fs.existsSync(configPath)) {
+    const loaded = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    firebaseConfig = { ...loaded, projectId: safeEnv.GCP_PROJECT_ID || safeEnv.VITE_GCP_PROJECT_ID || loaded.projectId || 'care-recall' };
+  }
+} catch (e) {
+  console.warn('Failed to load firebase-applet-config.json:', e);
+}
 
 function extractUserFromBearer(authHeader: string | undefined): { uid: string; email?: string; name?: string } | null {
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
@@ -65,6 +85,7 @@ function apiDevPlugin(): Plugin {
           req.url === '/api/journal/entries' || 
           req.url?.startsWith('/api/topics') || 
           req.url?.startsWith('/api/recall/') || 
+          req.url?.startsWith('/api/ai/') || 
           req.url === '/api/auth/me' || 
           req.url === '/api/auth/sync';
 
@@ -77,6 +98,155 @@ function apiDevPlugin(): Plugin {
             res.end(JSON.stringify({ 
               detail: 'Unauthorized: Valid Firebase Authorization Bearer token required. Mock or guest sessions forbidden.' 
             }));
+            return;
+          }
+
+          if (req.url === '/api/ai/extract-concepts' && req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => { body += chunk; });
+            req.on('end', async () => {
+              res.setHeader('Content-Type', 'application/json');
+              try {
+                const payload = JSON.parse(body || '{}');
+                const title = payload.title || '';
+                const docBody = payload.body || '';
+
+                if (genAI) {
+                  try {
+                    const prompt = `You are an expert Data Science and Machine Learning concept extractor.
+Analyze the following technical journal entry text:
+Title: "${title}"
+Body: "${docBody}"
+
+Extract 2 to 5 canonical technical Data Science / Machine Learning concepts mentioned in or relevant to this text.
+Return ONLY valid JSON matching this exact structure:
+{
+  "synthesizedTitle": "A concise, high-precision technical title summarizing the core work (or keep existing if already clear)",
+  "concepts": [
+    {
+      "topicId": "snake_case_id",
+      "canonicalName": "Canonical Concept Name (e.g., Low-Rank Adaptation)",
+      "category": "Deep Learning | Classical ML | Data Infrastructure | Statistics & Probability | MLOps & Infrastructure",
+      "importanceScore": 0.85,
+      "contextSummary": "Brief 1-sentence note on how this concept is used in the text"
+    }
+  ]
+}`;
+
+                    const result = await genAI.models.generateContent({
+                      model: 'gemini-2.5-flash',
+                      contents: prompt,
+                      config: {
+                        responseMimeType: 'application/json',
+                      },
+                    });
+
+                    const text = result.text;
+                    if (text) {
+                      const parsed = JSON.parse(text);
+                      if (parsed.concepts && Array.isArray(parsed.concepts) && parsed.concepts.length > 0) {
+                        res.end(JSON.stringify({
+                          status: 'ok',
+                          concepts: parsed.concepts,
+                          synthesizedTitle: parsed.synthesizedTitle || title,
+                        }));
+                        return;
+                      }
+                    }
+                  } catch (genAiErr) {
+                    console.warn('[GEMINI API] Concept extraction note:', genAiErr);
+                  }
+                }
+
+                // Fallback local extraction
+                const fallback = extractConceptsLocally(title, docBody);
+                res.end(JSON.stringify({
+                  status: 'ok',
+                  concepts: fallback.concepts,
+                  synthesizedTitle: fallback.synthesizedTitle,
+                }));
+              } catch (err) {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ detail: 'Invalid JSON payload' }));
+              }
+            });
+            return;
+          }
+
+          if (req.url === '/api/ai/cothinking-chat' && req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => { body += chunk; });
+            req.on('end', async () => {
+              res.setHeader('Content-Type', 'application/json');
+              try {
+                const payload = JSON.parse(body || '{}');
+                const title = payload.title || '';
+                const docBody = payload.body || '';
+                const userMsg = payload.message || '';
+
+                if (genAI) {
+                  try {
+                    const prompt = `You are the CARE Co-Thinking Partner (powered by Gemini 3.8 Flash), a rigorous Data Science peer reviewer and Socratic coach.
+Your user is writing a technical work journal.
+Document Title: "${title}"
+Document Body: "${docBody}"
+
+User Query: "${userMsg || 'Initial document review'}"
+
+Analyze the specific technical notes in their document and answer their query. Identify potential gaps, mathematical trade-offs, concurrency issues, or optimization bounds specifically for the concepts in their text.
+Return ONLY valid JSON with these exact fields:
+{
+  "assistantMessage": "Direct, professional, Socratic response tailored specifically to their document content and query.",
+  "mathBlock": "An optional LaTeX string equation or formula relevant to their document topic (e.g. \\\\text{Loss} = ...), or null",
+  "recommendation": "One actionable technical tip or verification step specific to their code/notes.",
+  "dynamicQuickPrompts": [
+    "3 short action prompts specific to this document topic"
+  ]
+}`;
+
+                    const result = await genAI.models.generateContent({
+                      model: 'gemini-2.5-flash',
+                      contents: prompt,
+                      config: {
+                        responseMimeType: 'application/json',
+                      },
+                    });
+
+                    const text = result.text;
+                    if (text) {
+                      const parsed = JSON.parse(text);
+                      if (parsed.assistantMessage) {
+                        res.end(JSON.stringify({
+                          status: 'ok',
+                          assistantMessage: parsed.assistantMessage,
+                          mathBlock: parsed.mathBlock || undefined,
+                          recommendation: parsed.recommendation || undefined,
+                          dynamicQuickPrompts: parsed.dynamicQuickPrompts || [
+                            `🎯 Coach Me on Gaps in ${title.slice(0, 20)}`,
+                            '📋 Summarize Key Concepts',
+                            '🧠 Probe Edge Cases',
+                          ],
+                          modelLatency: '240ms',
+                        }));
+                        return;
+                      }
+                    }
+                  } catch (genAiErr) {
+                    console.warn('[GEMINI API] Co-Thinking chat note:', genAiErr);
+                  }
+                }
+
+                // Fallback local response
+                const fallback = generateCoThinkingFallback(title, docBody, userMsg);
+                res.end(JSON.stringify({
+                  status: 'ok',
+                  ...fallback,
+                }));
+              } catch (err) {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ detail: 'Invalid JSON payload' }));
+              }
+            });
             return;
           }
 
