@@ -13,6 +13,8 @@ import {
   RecallTopicsQueryResponse,
   RecallSessionInitPayload,
   RecallSessionInitResponse,
+  RecallSessionMessageResponse,
+  RecallSessionEvaluateResponse,
 } from '../types';
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -177,6 +179,37 @@ export const api = {
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({ detail: 'Failed to initialize recall session' }));
       throw new Error(errorData.detail || 'Failed to initialize recall session');
+    }
+
+    return res.json();
+  },
+
+  async sendRecallMessage(sessionId: string, message?: string): Promise<RecallSessionMessageResponse> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`/api/recall/sessions/${sessionId}/message`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ message }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ detail: 'Failed to send interview message' }));
+      throw new Error(errorData.detail || 'Failed to send interview message');
+    }
+
+    return res.json();
+  },
+
+  async evaluateRecallSession(sessionId: string): Promise<RecallSessionEvaluateResponse> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`/api/recall/sessions/${sessionId}/evaluate`, {
+      method: 'POST',
+      headers,
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ detail: 'Failed to evaluate recall session' }));
+      throw new Error(errorData.detail || 'Failed to evaluate recall session');
     }
 
     return res.json();

@@ -411,6 +411,145 @@ function apiDevPlugin(): Plugin {
             });
             return;
           }
+
+          // Slice 4: Recall Socratic Interview message
+          if (req.url?.startsWith('/api/recall/sessions/') && req.url.endsWith('/message') && req.method === 'POST') {
+            const parts = req.url.split('/');
+            const sessionId = parts[4];
+            let body = '';
+            req.on('data', chunk => { body += chunk; });
+            req.on('end', () => {
+              res.setHeader('Content-Type', 'application/json');
+              const session = (global as any).__care_sessions_by_user?.[authUser.uid]?.[sessionId];
+              if (!session) {
+                res.statusCode = 404;
+                res.end(JSON.stringify({ detail: `Session '${sessionId}' not found.` }));
+                return;
+              }
+
+              let payload: any = {};
+              try {
+                if (body) payload = JSON.parse(body);
+              } catch (e) {}
+
+              const userMsg = payload.message?.trim();
+              if (userMsg) {
+                session.turns.push({
+                  role: 'user',
+                  message: userMsg,
+                  timestamp: new Date().toISOString(),
+                });
+              }
+
+              // Socratic peer response generation
+              const turnCount = session.turns.length;
+              const topicName = session.topicName || 'this technique';
+              const depth = session.targetDepth || 'intermediate';
+              let assistantMsg = '';
+
+              if (turnCount === 0 || (turnCount === 1 && userMsg)) {
+                if (depth === 'foundational') {
+                  assistantMsg = `Welcome to this Socratic inquiry on ${topicName}. To start off, how would you intuitively explain the core problem it addresses, and what breaks down if we attempt to solve it using simpler classical baselines?`;
+                } else if (depth === 'advanced') {
+                  assistantMsg = `Let's dig into ${topicName}. From a mathematical formulation standpoint, what objective function or loss surfaces dictate its convergence, and how does the architecture prevent gradient instability or degenerate representations?`;
+                } else {
+                  assistantMsg = `Welcome. Let's examine ${topicName}. Walk me through its primary algorithmic mechanism: what inputs does it transform, and what fundamental trade-off does it make between representational capacity and computational efficiency?`;
+                }
+              } else if (turnCount <= 3) {
+                assistantMsg = `That's a sound initial formulation. Let's probe the mechanics deeper: when you tune hyperparameters or loss coefficients for ${topicName}, which parameter directly controls this sensitivity, and what happens mathematically during gradient updates if that parameter is set an order of magnitude too high?`;
+              } else if (turnCount <= 5) {
+                assistantMsg = `Great observation regarding the dynamics. Now consider a real-world edge case: suppose your production input distribution shifts significantly or contains high-sparsity anomalies. Under what specific conditions does ${topicName} fail silently, and how would you verify this in telemetry?`;
+              } else {
+                assistantMsg = `To wrap up our technical deep dive into ${topicName}: if you had to mentor a colleague on avoiding the single most dangerous misconception when implementing or fine-tuning this, what would that core takeaway be?`;
+              }
+
+              const assistantTurn = {
+                role: 'assistant',
+                message: assistantMsg,
+                timestamp: new Date().toISOString(),
+              };
+              session.turns.push(assistantTurn);
+
+              res.end(JSON.stringify({
+                status: 'ok',
+                session,
+                turn: assistantTurn,
+                isFirstTurn: turnCount <= 1,
+              }));
+            });
+            return;
+          }
+
+          // Slice 4: Recall Socratic Interview evaluation
+          if (req.url?.startsWith('/api/recall/sessions/') && req.url.endsWith('/evaluate') && req.method === 'POST') {
+            const parts = req.url.split('/');
+            const sessionId = parts[4];
+            res.setHeader('Content-Type', 'application/json');
+            const session = (global as any).__care_sessions_by_user?.[authUser.uid]?.[sessionId];
+            if (!session) {
+              res.statusCode = 404;
+              res.end(JSON.stringify({ detail: `Session '${sessionId}' not found.` }));
+              return;
+            }
+
+            const userTurns = session.turns.filter((t: any) => t.role === 'user');
+            const totalChars = userTurns.reduce((acc: number, t: any) => acc + t.message.length, 0);
+            const scorePercentage = Math.min(96, Math.max(55, Math.round(60 + Math.min(30, (totalChars / 40) * 4) + (userTurns.length * 3))));
+            const overallScore = +(1.0 + (scorePercentage / 100) * 4.0).toFixed(1);
+
+            const evaluation = {
+              scorePercentage,
+              conceptualDepth: scorePercentage >= 80 ? 4 : 3,
+              practicalApplication: scorePercentage >= 75 ? 4 : 3,
+              overallScore,
+              identifiedGaps: [
+                `Formal mathematical bounds and derivation nuances for ${session.topicName}`,
+                `Edge case handling under non-stationary or high-skew feature distributions`,
+              ],
+              retentionTips: [
+                `Work through a paper-and-pencil derivation of the primary objective functions in ${session.topicName}`,
+                `Implement a minimal toy benchmark from scratch to test degradation thresholds`,
+                `Schedule a follow-up active recall in 4-6 days to reinforce memory consolidation`,
+              ],
+              strengths: `Demonstrated clear practical intuition and solid grasp of core architectural trade-offs for ${session.topicName}.`,
+              areasForImprovement: `Solidify mathematical mechanics and explicit failure mode telemetry mitigations.`,
+              keyTakeaway: `${session.topicName} relies on core mathematical invariants that must be validated in production deployment.`,
+            };
+
+            const nowIso = new Date().toISOString();
+            session.status = 'completed';
+            session.evaluation = evaluation;
+            session.completedAt = nowIso;
+
+            const topic = userTopics[session.topicId];
+            if (topic) {
+              topic.lastRecallAt = nowIso;
+              topic.lastRecallScore = overallScore;
+              if (!topic.recallHistory) topic.recallHistory = [];
+              topic.recallHistory.push({
+                sessionId,
+                timestamp: nowIso,
+                score: overallScore,
+                feedbackSummary: evaluation.keyTakeaway,
+              });
+
+              const elapsedDays = 0.1;
+              const T_decay = +(1.0 - Math.exp(-0.1 * elapsedDays)).toFixed(3);
+              const A_signal = +(topic.effectiveAiAssistanceWeight || 0.5).toFixed(3);
+              const H_weakness = +((5.0 - overallScore) / 4.0).toFixed(3);
+              const M_freq = +(1.0 + 0.05 * Math.min(Math.max(0, (topic.journalOccurrences || 1) - 1), 6)).toFixed(3);
+              topic.currentPriorityScore = Math.round(Math.min(100, Math.max(0, (0.4 * T_decay + 0.35 * A_signal + 0.25 * H_weakness) * M_freq * 100)) * 10) / 10;
+              topic.explanationReason = `T(t)=${T_decay} | A(t)=${A_signal} | H(t)=${H_weakness} | M(t)=${M_freq}`;
+            }
+
+            res.end(JSON.stringify({
+              status: 'ok',
+              session,
+              evaluation,
+              updatedTopic: topic || null,
+            }));
+            return;
+          }
         }
 
         next();

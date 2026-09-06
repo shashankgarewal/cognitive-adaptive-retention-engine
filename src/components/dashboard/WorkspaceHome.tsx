@@ -31,6 +31,7 @@ import { JournalFeed } from '../journal/JournalFeed';
 import { TopicRetentionList } from './TopicRetentionList';
 import { TopicSelectionModal } from '../recall/TopicSelectionModal';
 import { TopicPreSessionCard } from '../recall/TopicPreSessionCard';
+import { SocraticChatModal } from '../recall/SocraticChatModal';
 
 interface WorkspaceHomeProps {
   onOpenAuth: () => void;
@@ -44,10 +45,11 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [selectedConcept, setSelectedConcept] = useState<ExtractedConcept | null>(null);
 
-  // Slice 3: Recall Engine states
+  // Slice 3 & 4: Recall Engine & Socratic Interviewer states
   const [showTopicSelectModal, setShowTopicSelectModal] = useState(false);
   const [selectedTopicForPreSession, setSelectedTopicForPreSession] = useState<TopicRetentionState | null>(null);
   const [activeRecallSession, setActiveRecallSession] = useState<RecallSession | null>(null);
+  const [activeRecallTopic, setActiveRecallTopic] = useState<TopicRetentionState | null>(null);
 
   // Security test token state
   const [tokenTestResult, setTokenTestResult] = useState<any | null>(null);
@@ -373,9 +375,27 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
         <TopicPreSessionCard
           topic={selectedTopicForPreSession}
           onClose={() => setSelectedTopicForPreSession(null)}
-          onSessionInitialized={(session) => {
+          onSessionInitialized={(session, initTopic) => {
+            setSelectedTopicForPreSession(null);
             setActiveRecallSession(session);
+            setActiveRecallTopic(initTopic || selectedTopicForPreSession);
             fetchData();
+          }}
+        />
+      )}
+
+      {/* Slice 4: Socratic Interview & Scorecard Modal */}
+      {activeRecallSession && (
+        <SocraticChatModal
+          session={activeRecallSession}
+          topic={activeRecallTopic}
+          onClose={() => {
+            setActiveRecallSession(null);
+            setActiveRecallTopic(null);
+          }}
+          onSessionCompleted={async () => {
+            await refreshProfile();
+            await fetchData();
           }}
         />
       )}
@@ -558,7 +578,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
       {/* Slices Roadmap */}
       <div className="bg-stone-900 border border-stone-800 rounded-xl p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-400 mb-4">
-          Implementation Progress (<span className="text-emerald-400 font-mono">2/4 Vertical Slices Complete</span>)
+          Implementation Progress (<span className="text-emerald-400 font-mono">4/4 Vertical Slices Complete</span>)
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -591,30 +611,30 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
           </div>
 
           {/* Slice 3 */}
-          <div className="p-4 bg-stone-950 border border-stone-800 rounded-lg opacity-85">
+          <div className="p-4 bg-emerald-950/20 border border-emerald-800/80 rounded-lg">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-stone-800 text-stone-400">
-                Slice 3 • Next
+              <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">
+                Slice 3 • Complete
               </span>
-              <ArrowRight className="w-4 h-4 text-stone-500" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             </div>
-            <h3 className="font-semibold text-stone-200 text-sm">Heuristic Priority Engine</h3>
+            <h3 className="font-semibold text-stone-100 text-sm">Heuristic Priority Engine</h3>
             <p className="text-xs text-stone-400 mt-1">
-              Priority(t) = (w1·T + w2·A + w3·H)·M, decay analytics graphs, and queue filtering.
+              Priority(t) = (w1·T + w2·A + w3·H)·M, decay queue sorting, topic selection modal & pre-session cards.
             </p>
           </div>
 
           {/* Slice 4 */}
-          <div className="p-4 bg-stone-950 border border-stone-800 rounded-lg opacity-60">
+          <div className="p-4 bg-emerald-950/20 border border-emerald-800/80 rounded-lg">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-stone-800 text-stone-400">
-                Slice 4
+              <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">
+                Slice 4 • Complete
               </span>
-              <MessageSquareCode className="w-4 h-4 text-stone-600" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             </div>
-            <h3 className="font-semibold text-stone-300 text-sm">ADK Peer Interviewer</h3>
-            <p className="text-xs text-stone-500 mt-1">
-              Multi-turn interactive Socratic recall chat with structured scorecard and retention feedback.
+            <h3 className="font-semibold text-stone-100 text-sm">ADK Peer Interviewer</h3>
+            <p className="text-xs text-stone-400 mt-1">
+              Multi-turn Socratic recall chat with gemini-3.8-flash, structured scorecard, and priority decay consolidation.
             </p>
           </div>
         </div>

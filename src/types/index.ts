@@ -80,12 +80,29 @@ export interface ChatTurn {
 }
 
 export interface RecallEvaluation {
-  conceptualDepth: number;
-  practicalApplication: number;
-  overallScore: number;
+  scorePercentage?: number; // 0 - 100
+  conceptualDepth: number; // 1 - 5
+  practicalApplication: number; // 1 - 5
+  overallScore: number; // 1.0 - 5.0
+  identifiedGaps?: string[];
+  retentionTips?: string[];
   strengths: string;
   areasForImprovement: string;
   keyTakeaway: string;
+}
+
+export interface RecallSessionMessageResponse {
+  status: string;
+  session: RecallSession;
+  turn: ChatTurn;
+  isFirstTurn?: boolean;
+}
+
+export interface RecallSessionEvaluateResponse {
+  status: string;
+  session: RecallSession;
+  evaluation: RecallEvaluation;
+  updatedTopic: TopicRetentionState;
 }
 
 export interface RecallSession {

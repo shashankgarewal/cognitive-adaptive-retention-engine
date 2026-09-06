@@ -187,14 +187,17 @@ export const TopicPreSessionCard: React.FC<TopicPreSessionCardProps> = ({
                   Return to Workspace
                 </button>
                 <button
+                  id="btn-launch-interview-stage"
                   type="button"
                   onClick={() => {
-                    alert(`Recall Session ${initializedSession.sessionId} ready for Slice 4 Socratic Interview!`);
+                    if (onSessionInitialized) {
+                      onSessionInitialized(initializedSession, topic);
+                    }
                     onClose();
                   }}
                   className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
                 >
-                  <span>Launch Interview Stage</span>
+                  <span>Launch Socratic Interview</span>
                   <ArrowRight className="w-3.5 h-3.5 text-stone-950" />
                 </button>
               </div>

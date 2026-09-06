@@ -158,12 +158,33 @@ class ChatTurn(FirestoreBaseModel):
 
 
 class RecallEvaluation(FirestoreBaseModel):
-    conceptualDepth: int = Field(ge=1, le=5)
-    practicalApplication: int = Field(ge=1, le=5)
-    overallScore: float = Field(ge=1.0, le=5.0)
-    strengths: str
-    areasForImprovement: str
-    keyTakeaway: str
+    scorePercentage: int = Field(default=75, ge=0, le=100)
+    conceptualDepth: int = Field(default=4, ge=1, le=5)
+    practicalApplication: int = Field(default=4, ge=1, le=5)
+    overallScore: float = Field(default=3.5, ge=1.0, le=5.0)
+    identifiedGaps: List[str] = Field(default_factory=list)
+    retentionTips: List[str] = Field(default_factory=list)
+    strengths: str = ""
+    areasForImprovement: str = ""
+    keyTakeaway: str = ""
+
+
+class RecallMessageRequest(BaseModel):
+    message: Optional[str] = None
+
+
+class RecallMessageResponse(BaseModel):
+    status: str = "ok"
+    session: Any
+    turn: ChatTurn
+    isFirstTurn: bool = False
+
+
+class RecallEvaluateResponse(BaseModel):
+    status: str = "ok"
+    session: Any
+    evaluation: RecallEvaluation
+    updatedTopic: Any
 
 
 class RecallSession(FirestoreBaseModel):
