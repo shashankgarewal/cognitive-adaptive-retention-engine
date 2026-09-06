@@ -54,6 +54,7 @@ export const RecallSessionModal: React.FC<RecallSessionModalProps> = ({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hasInitializedRef = useRef<boolean>(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -63,26 +64,29 @@ export const RecallSessionModal: React.FC<RecallSessionModalProps> = ({
     scrollToBottom();
   }, [session.turns, isSending]);
 
-  // If session has no turns initially, trigger opening active recall prompt automatically
+  // If session unexpectedly has no turns on load, fetch the initial prompt safely once
   useEffect(() => {
+    if (session.turns.length > 0 || session.status === 'completed' || hasInitializedRef.current) {
+      return;
+    }
+
+    hasInitializedRef.current = true;
     let isMounted = true;
 
     async function initFirstTurn() {
-      if (session.turns.length === 0 && session.status !== 'completed') {
-        setIsSending(true);
-        try {
-          const res = await api.sendRecallMessage(session.sessionId);
-          if (isMounted) {
-            setSession(res.session);
-          }
-        } catch (err: any) {
-          if (isMounted) {
-            setErrorMessage(err.message || 'Failed to initialize first active recall prompt.');
-          }
-        } finally {
-          if (isMounted) {
-            setIsSending(false);
-          }
+      setIsSending(true);
+      try {
+        const res = await api.sendRecallMessage(session.sessionId);
+        if (isMounted) {
+          setSession(res.session);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setErrorMessage(err.message || 'Failed to initialize active recall prompt.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsSending(false);
         }
       }
     }
@@ -92,7 +96,7 @@ export const RecallSessionModal: React.FC<RecallSessionModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [session.sessionId]);
+  }, [session.sessionId, session.turns.length, session.status]);
 
   // Close on Escape key
   useEffect(() => {

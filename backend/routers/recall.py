@@ -29,6 +29,7 @@ from backend.models.schemas import (
     TopicRetentionState,
 )
 from backend.services.recall_heuristic import recall_heuristic_engine
+from backend.services.adk_interviewer import adk_interviewer
 from backend.routers.journal import _in_memory_topics
 
 logger = logging.getLogger("care.recall_router")
@@ -283,7 +284,15 @@ async def initialize_recall_session(
         completedAt=None,
     )
 
-    # 4. Write session to Firestore (/users/{userId}/recall_sessions/{sessionId})
+    # 4. Generate EXACTLY ONE initial prompt message from the agent
+    initial_turn = await adk_interviewer.generate_next_turn(
+        topic=target_topic,
+        session=new_session,
+        user_message=None,
+    )
+    new_session.turns = [initial_turn]
+
+    # 5. Write session to Firestore (/users/{userId}/recall_sessions/{sessionId})
     if db:
         try:
             session_ref = (
