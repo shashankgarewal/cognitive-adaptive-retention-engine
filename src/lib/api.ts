@@ -79,6 +79,9 @@ export const api = {
     rawContent: string;
     aiAssistanceLevel: string;
     aiToolUsed?: string;
+    modeType?: string;
+    stabilityRatio?: number;
+    tags?: string[];
   }) {
     const headers = await getAuthHeaders();
     const res = await fetch('/api/journal/entries', {

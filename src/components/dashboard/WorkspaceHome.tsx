@@ -33,6 +33,7 @@ import { TopicSelectionModal } from '../recall/TopicSelectionModal';
 import { TopicPreSessionCard } from '../recall/TopicPreSessionCard';
 import { RecallSessionModal } from '../recall/RecallSessionModal';
 import { ZeroStateDashboard } from './ZeroStateDashboard';
+import { CognitiveRetentionStream } from '../journal/CognitiveRetentionStream';
 import { Header } from '../layout/Header';
 
 interface WorkspaceHomeProps {
@@ -138,6 +139,72 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth, onView
     );
   }
 
+  // Render the Authenticated Populated Stream when entries.length > 0
+  return (
+    <>
+      <CognitiveRetentionStream
+        entries={entries}
+        topics={topics}
+        onOpenSpec={onOpenSpec}
+        onSelectNav={(nav) => {
+          if (nav === 'spec' && onOpenSpec) {
+            onOpenSpec();
+          }
+        }}
+        onViewLanding={onViewLanding}
+        onOpenAuth={onOpenAuth}
+        onLogSuccess={handleJournalSuccess}
+        onToggleToZeroState={() => setForceZeroState(true)}
+      />
+
+      {/* Socratic Recall Dialogue Modal */}
+      {showTopicSelectModal && (
+        <TopicSelectionModal
+          topics={topics}
+          onSelectTopic={(t) => {
+            setSelectedTopicForPreSession(t);
+            setShowTopicSelectModal(false);
+          }}
+          onClose={() => setShowTopicSelectModal(false)}
+        />
+      )}
+
+      {selectedTopicForPreSession && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="w-full max-w-lg">
+            <TopicPreSessionCard
+              topic={selectedTopicForPreSession}
+              onStartSession={(session) => {
+                setActiveRecallTopic(selectedTopicForPreSession);
+                setActiveRecallSession(session);
+                setSelectedTopicForPreSession(null);
+              }}
+              onCancel={() => setSelectedTopicForPreSession(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      {activeRecallSession && activeRecallTopic && (
+        <RecallSessionModal
+          session={activeRecallSession}
+          topic={activeRecallTopic}
+          onComplete={async () => {
+            setActiveRecallSession(null);
+            setActiveRecallTopic(null);
+            await fetchData();
+            await refreshProfile();
+          }}
+          onClose={() => {
+            setActiveRecallSession(null);
+            setActiveRecallTopic(null);
+          }}
+        />
+      )}
+    </>
+  );
+
+  /* Legacy fallback view */
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col font-sans">
       <Header onOpenAuth={onOpenAuth} onViewLanding={onViewLanding} />

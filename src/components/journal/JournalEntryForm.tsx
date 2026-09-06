@@ -74,6 +74,8 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ onSuccess, o
   const [rawContent, setRawContent] = useState('');
   const [aiAssistanceLevel, setAiAssistanceLevel] = useState<AiAssistanceLevel>('prompt_driven');
   const [aiToolUsed, setAiToolUsed] = useState('');
+  const [modeType, setModeType] = useState('Web App');
+  const [customMode, setCustomMode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [extractedResult, setExtractedResult] = useState<{
@@ -97,11 +99,13 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ onSuccess, o
     setIsSubmitting(true);
 
     try {
+      const finalMode = modeType === 'custom' ? (customMode.trim() || 'Web App') : modeType;
       const res = await api.createJournalEntry({
         title: title.trim(),
         rawContent: rawContent.trim(),
         aiAssistanceLevel,
         aiToolUsed: aiToolUsed.trim() || undefined,
+        modeType: finalMode,
       });
 
       const entry = res.entry;
@@ -314,9 +318,38 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ onSuccess, o
             </div>
           </div>
 
-          {/* AI Tool & Content */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-1">
+          {/* Ingestion Mode & AI Tool */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="journal-mode" className="block text-xs font-medium text-stone-300 mb-1.5">
+                Logged via &lt;mode-type&gt; <span className="text-emerald-400">*</span>
+              </label>
+              <select
+                id="journal-mode"
+                value={modeType}
+                onChange={(e) => setModeType(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-stone-950 border border-stone-800 rounded-lg text-xs text-stone-100 focus:outline-none focus:border-emerald-500 transition-colors"
+              >
+                <option value="Web App">Web App</option>
+                <option value="GitHub PR #412">GitHub PR #412</option>
+                <option value="Web App / Claude CLI">Web App / Claude CLI</option>
+                <option value="Cursor Extension">Cursor Extension</option>
+                <option value="VS Code Plugin">VS Code Plugin</option>
+                <option value="CLI Pre-commit Hook">CLI Pre-commit Hook</option>
+                <option value="custom">Custom Mode...</option>
+              </select>
+              {modeType === 'custom' && (
+                <input
+                  type="text"
+                  value={customMode}
+                  onChange={(e) => setCustomMode(e.target.value)}
+                  placeholder="e.g. NeoVim Plugin, CI Pipeline"
+                  className="w-full mt-2 px-3 py-1.5 bg-stone-950 border border-stone-800 rounded-lg text-xs text-stone-100 placeholder-stone-500 focus:outline-none focus:border-emerald-500"
+                />
+              )}
+            </div>
+
+            <div>
               <label htmlFor="journal-tool" className="block text-xs font-medium text-stone-300 mb-1.5">
                 AI Tool / Agent Used
               </label>
@@ -329,26 +362,27 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ onSuccess, o
                 className="w-full px-3.5 py-2.5 bg-stone-950 border border-stone-800 rounded-lg text-xs text-stone-100 placeholder-stone-500 focus:outline-none focus:border-emerald-500 transition-colors"
               />
             </div>
+          </div>
 
-            <div className="sm:col-span-2">
-              <div className="flex items-center justify-between mb-1.5">
-                <label htmlFor="journal-content" className="block text-xs font-medium text-stone-300">
-                  Engineering Notes & Context <span className="text-emerald-400">*</span>
-                </label>
-                <span className="text-[11px] text-stone-500">
-                  Equations, architecture, code snippets
-                </span>
-              </div>
-              <textarea
-                id="journal-content"
-                rows={4}
-                value={rawContent}
-                onChange={(e) => setRawContent(e.target.value)}
-                placeholder="Describe what you worked on, trade-offs analyzed, models configured, algorithms tuned..."
-                className="w-full px-3.5 py-2.5 bg-stone-950 border border-stone-800 rounded-lg text-xs text-stone-100 placeholder-stone-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors leading-relaxed font-sans"
-                required
-              />
+          {/* Notes & Context Content */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label htmlFor="journal-content" className="block text-xs font-medium text-stone-300">
+                Engineering Notes &amp; Context <span className="text-emerald-400">*</span>
+              </label>
+              <span className="text-[11px] text-stone-500">
+                Equations, architecture, code snippets
+              </span>
             </div>
+            <textarea
+              id="journal-content"
+              rows={4}
+              value={rawContent}
+              onChange={(e) => setRawContent(e.target.value)}
+              placeholder="Describe what you worked on, trade-offs analyzed, models configured, algorithms tuned..."
+              className="w-full px-3.5 py-2.5 bg-stone-950 border border-stone-800 rounded-lg text-xs text-stone-100 placeholder-stone-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors leading-relaxed font-sans"
+              required
+            />
           </div>
 
           {/* Submit Action */}

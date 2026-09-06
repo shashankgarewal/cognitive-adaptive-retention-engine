@@ -121,6 +121,257 @@ function apiDevPlugin(): Plugin {
           if (!(global as any).__care_journals_by_user) (global as any).__care_journals_by_user = {};
           if (!(global as any).__care_topics_by_user) (global as any).__care_topics_by_user = {};
 
+          // Initialize with 14 telemetry journals matching the specification if not yet initialized
+          if (!(global as any).__care_journals_by_user[authUser.uid]) {
+            const seedJournals = [
+              {
+                entryId: 'entry-telemetry-01',
+                userId: authUser.uid,
+                title: 'Self-Attention Mechanism Optimization',
+                rawContent: 'Refactored multi-head scaled dot-product attention kernels. Replaced custom naive QK^T matrix multiplication with tiled block SRAM operations to mitigate memory bandwidth saturation. AI co-pilot generated the vector masking routines while I tuned dimension alignment with torch.matmul(q, k.transpose(-2, -1)) and strict block_size = 128 boundaries.',
+                aiAssistanceLevel: 'spec_driven',
+                aiReliancePercentage: 85,
+                aiToolUsed: 'Cursor Copilot',
+                modeType: 'Web App',
+                stabilityRatio: 0.34,
+                kernelProfileSnapshot: 'KERNEL PROFILE SNAPSHOT',
+                hardwareProfile: 'SRAM TILE: 128x128 FP16',
+                tags: ['#Self-Attention Mechanism', '#FlashAttention-2', '#Memory Bandwidth Kernels'],
+                timeUtc: '14:22 UTC',
+                actionLabel: 'Recall Diagnostic →',
+                dateGroup: 'Today — 6 Sept',
+                extractedConcepts: [
+                  { topicId: 'self_attention_mechanism', canonicalName: 'Self-Attention Mechanism', category: 'Deep Learning', importanceScore: 0.95 },
+                  { topicId: 'flashattention_kernels', canonicalName: 'FlashAttention-2', category: 'Deep Learning', importanceScore: 0.88 }
+                ],
+                createdAt: '2026-09-06T14:22:00.000Z'
+              },
+              {
+                entryId: 'entry-telemetry-02',
+                userId: authUser.uid,
+                title: 'Distributed Cache Invalidation via Redis Streams',
+                rawContent: 'Implemented consumer group rebalancing and two-phase tombstone marking for distributed session state. Evaluated probabilistic early expiration against dogpiling cache stamps across 8 global nodes. Configured manual backpressure acknowledgment queues with Lua scripts to prevent stale subscriber drops.',
+                aiAssistanceLevel: 'prompt_driven',
+                aiReliancePercentage: 45,
+                aiToolUsed: 'Claude Sonnet',
+                modeType: 'GitHub PR #412',
+                stabilityRatio: 0.78,
+                tags: ['#Cache Coherence', '#Redis Streams', '#Distributed Systems'],
+                timeUtc: '09:40 UTC',
+                actionLabel: 'Stable',
+                dateGroup: 'Yesterday — 5 Sept',
+                extractedConcepts: [
+                  { topicId: 'distributed_cache_invalidation', canonicalName: 'Distributed Cache Invalidation', category: 'Distributed Systems', importanceScore: 0.82 }
+                ],
+                createdAt: '2026-09-05T09:40:00.000Z'
+              },
+              {
+                entryId: 'entry-telemetry-03',
+                userId: authUser.uid,
+                title: 'Postgres JSONB GIN Indexing & Query Planner Cost Tuning',
+                rawContent: 'Diagnosed sequential table scan on 4.2M rows telemetry logs. Constructed expression GIN index over nested schema payload and adjusted random_page_cost down to 1.1 for NVMe storage, shifting the planner execution graph from a 420ms heap inspection to a 3.4ms bitmap index scan.',
+                aiAssistanceLevel: 'spec_driven',
+                aiReliancePercentage: 78,
+                aiToolUsed: 'Claude CLI',
+                modeType: 'Web App / Claude CLI',
+                stabilityRatio: 0.49,
+                tags: ['#PostgreSQL GIN', '#Query Planner Costs', '#Storage Engines'],
+                timeUtc: '11:15 UTC',
+                actionLabel: 'Review Prompt Queue →',
+                dateGroup: 'Earlier this week — 2 Sept',
+                extractedConcepts: [
+                  { topicId: 'postgres_gin_indexing', canonicalName: 'Postgres GIN Indexing', category: 'Data Infrastructure', importanceScore: 0.86 }
+                ],
+                createdAt: '2026-09-02T11:15:00.000Z'
+              },
+              {
+                entryId: 'entry-telemetry-04',
+                userId: authUser.uid,
+                title: 'HNSW Vector Index Partitioning in pgvector',
+                rawContent: 'Tuned hierarchical navigable small world graphs over 1.2M 1536-dimensional embeddings. Configured m=16 and ef_construction=64 to maintain 97% recall at 12ms latency p99.',
+                aiAssistanceLevel: 'agentic',
+                aiReliancePercentage: 82,
+                aiToolUsed: 'Cursor Agent',
+                modeType: 'Cursor Extension',
+                stabilityRatio: 0.41,
+                tags: ['#Vector Search', '#HNSW Graphs', '#pgvector'],
+                timeUtc: '16:05 UTC',
+                actionLabel: 'Recall Diagnostic →',
+                dateGroup: 'Earlier this week — 2 Sept',
+                extractedConcepts: [{ topicId: 'hnsw_vector_indexing', canonicalName: 'HNSW Vector Indexing', category: 'Information Retrieval', importanceScore: 0.91 }],
+                createdAt: '2026-09-02T16:05:00.000Z'
+              },
+              {
+                entryId: 'entry-telemetry-05',
+                userId: authUser.uid,
+                title: 'LoRA Rank Decomposition for Llama-3 8B Fine-Tuning',
+                rawContent: 'Calculated gradient memory footprint for LoRA adapters targetting q_proj and v_proj layers. Selected rank r=16 with alpha=32 to preserve parameter efficiency.',
+                aiAssistanceLevel: 'prompt_driven',
+                aiReliancePercentage: 62,
+                aiToolUsed: 'Gemini CLI',
+                modeType: 'Web App',
+                stabilityRatio: 0.65,
+                tags: ['#LoRA', '#PEFT', '#Fine-Tuning'],
+                timeUtc: '10:30 UTC',
+                actionLabel: 'Stable',
+                dateGroup: 'Last week — 30 Aug',
+                extractedConcepts: [{ topicId: 'lora_fine_tuning', canonicalName: 'LoRA Fine-Tuning', category: 'Deep Learning', importanceScore: 0.89 }],
+                createdAt: '2026-08-30T10:30:00.000Z'
+              },
+              {
+                entryId: 'entry-telemetry-06',
+                userId: authUser.uid,
+                title: 'Quantization-Aware Training with FP8 Scaling Factors',
+                rawContent: 'Configured delayed per-tensor scaling factors for forward and backward passes. Verified dynamic range alignment between activations and weights.',
+                aiAssistanceLevel: 'spec_driven',
+                aiReliancePercentage: 74,
+                aiToolUsed: 'Claude 3.5 Sonnet',
+                modeType: 'VS Code Plugin',
+                stabilityRatio: 0.52,
+                tags: ['#Quantization', '#FP8', '#Model Optimization'],
+                timeUtc: '15:10 UTC',
+                actionLabel: 'Review Prompt Queue →',
+                dateGroup: 'Last week — 29 Aug',
+                extractedConcepts: [{ topicId: 'model_quantization', canonicalName: 'FP8 Quantization', category: 'Model Optimization', importanceScore: 0.85 }],
+                createdAt: '2026-08-29T15:10:00.000Z'
+              },
+              {
+                entryId: 'entry-telemetry-07',
+                userId: authUser.uid,
+                title: 'Bayesian A/B Testing Stopping Boundaries',
+                rawContent: 'Formulated Beta-Binomial conjugate prior distributions for conversion rate telemetry. Calculated expected loss threshold epsilon=0.001 to declare significance early.',
+                aiAssistanceLevel: 'none',
+                aiReliancePercentage: 12,
+                modeType: 'Web App',
+                stabilityRatio: 0.91,
+                tags: ['#Bayesian Statistics', '#AB Testing', '#Experimentation'],
+                timeUtc: '08:45 UTC',
+                actionLabel: 'Stable',
+                dateGroup: 'Last week — 28 Aug',
+                extractedConcepts: [{ topicId: 'bayesian_inference', canonicalName: 'Bayesian Inference', category: 'Statistics & Probability', importanceScore: 0.88 }],
+                createdAt: '2026-08-28T08:45:00.000Z'
+              },
+              {
+                entryId: 'entry-telemetry-08',
+                userId: authUser.uid,
+                title: 'Ray Cluster Auto-scaling & Actor Placement Groups',
+                rawContent: 'Resolved worker node eviction during batch embedding extraction. Configured STRICT_SPREAD placement strategy across spot instances.',
+                aiAssistanceLevel: 'prompt_driven',
+                aiReliancePercentage: 55,
+                aiToolUsed: 'Cursor Copilot',
+                modeType: 'GitHub PR #389',
+                stabilityRatio: 0.72,
+                tags: ['#Distributed Computing', '#Ray Cluster', '#MLOps'],
+                timeUtc: '13:20 UTC',
+                actionLabel: 'Stable',
+                dateGroup: 'Earlier in August — 25 Aug',
+                extractedConcepts: [{ topicId: 'ray_distributed_compute', canonicalName: 'Ray Distributed Clusters', category: 'MLOps & Infrastructure', importanceScore: 0.80 }],
+                createdAt: '2026-08-25T13:20:00.000Z'
+              },
+              {
+                entryId: 'entry-telemetry-09',
+                userId: authUser.uid,
+                title: 'Covariate Shift Detection via Maximum Mean Discrepancy',
+                rawContent: 'Deployed two-sample MMD test on streaming inference embeddings. Calculated kernel bandwidth via median heuristic to signal automated retraining pipelines.',
+                aiAssistanceLevel: 'spec_driven',
+                aiReliancePercentage: 79,
+                aiToolUsed: 'Claude CLI',
+                modeType: 'Web App / Claude CLI',
+                stabilityRatio: 0.44,
+                tags: ['#Data Drift', '#MMD Test', '#Model Monitoring'],
+                timeUtc: '17:00 UTC',
+                actionLabel: 'Recall Diagnostic →',
+                dateGroup: 'Earlier in August — 24 Aug',
+                extractedConcepts: [{ topicId: 'covariate_shift_detection', canonicalName: 'Covariate Shift & Data Drift', category: 'MLOps & Infrastructure', importanceScore: 0.90 }],
+                createdAt: '2026-08-24T17:00:00.000Z'
+              },
+              {
+                entryId: 'entry-telemetry-10',
+                userId: authUser.uid,
+                title: 'Stratified K-Fold Cross Validation with Group Leakage Protection',
+                rawContent: 'Audited multi-task clinical diagnostic model. Identified patient-level cross-contamination across validation folds and replaced random stratification with GroupKFold partitioned by patient ID hash.',
+                aiAssistanceLevel: 'none',
+                aiReliancePercentage: 15,
+                modeType: 'Web App',
+                stabilityRatio: 0.88,
+                tags: ['#Cross Validation', '#Data Leakage', '#Model Evaluation'],
+                timeUtc: '10:15 UTC',
+                actionLabel: 'Stable',
+                dateGroup: 'Earlier in August — 21 Aug',
+                extractedConcepts: [{ topicId: 'stratified_kfold', canonicalName: 'Stratified K-Fold CV', category: 'Classical ML', importanceScore: 0.84 }],
+                createdAt: '2026-08-21T10:15:00.000Z'
+              },
+              {
+                entryId: 'entry-telemetry-11',
+                userId: authUser.uid,
+                title: 'Cross-Attention Key/Value Caching for Streaming LLM Generation',
+                rawContent: 'Implemented rolling circular buffer for KV states in autoregressive decoding. Bound memory allocation to O(context_window) rather than O(sequence_length), eliminating memory spikes.',
+                aiAssistanceLevel: 'agentic',
+                aiReliancePercentage: 86,
+                aiToolUsed: 'Cursor Agent',
+                modeType: 'Cursor Extension',
+                stabilityRatio: 0.31,
+                tags: ['#KV Cache', '#Transformer Decoding', '#Deep Learning'],
+                timeUtc: '14:50 UTC',
+                actionLabel: 'Recall Diagnostic →',
+                dateGroup: 'Earlier in August — 18 Aug',
+                extractedConcepts: [{ topicId: 'kv_cache_decoding', canonicalName: 'KV Cache Optimization', category: 'Deep Learning', importanceScore: 0.93 }],
+                createdAt: '2026-08-18T14:50:00.000Z'
+              },
+              {
+                entryId: 'entry-telemetry-12',
+                userId: authUser.uid,
+                title: 'Feature Store Point-in-Time Correct Joins via Feast',
+                rawContent: 'Constructed as-of timestamps joins for real-time fraud scoring pipeline. Eliminated lookahead bias between batch entity states and event occurrences with TTL boundary constraints.',
+                aiAssistanceLevel: 'prompt_driven',
+                aiReliancePercentage: 48,
+                aiToolUsed: 'Claude CLI',
+                modeType: 'Web App / Claude CLI',
+                stabilityRatio: 0.74,
+                tags: ['#Feature Store', '#Point-in-Time Join', '#Data Engineering'],
+                timeUtc: '11:05 UTC',
+                actionLabel: 'Stable',
+                dateGroup: 'Earlier in August — 15 Aug',
+                extractedConcepts: [{ topicId: 'feature_store_joins', canonicalName: 'Feature Store Time Joins', category: 'Data Infrastructure', importanceScore: 0.79 }],
+                createdAt: '2026-08-15T11:05:00.000Z'
+              },
+              {
+                entryId: 'entry-telemetry-13',
+                userId: authUser.uid,
+                title: 'Gradient Accumulation vs Distributed Data Parallel Gradient Sync',
+                rawContent: 'Analyzed all-reduce communication latency overhead on 8x H100 GPUs. Configured gradient accumulation step size = 4 with bucket cap = 25MB to hide all-reduce synchronization behind backward pass computation.',
+                aiAssistanceLevel: 'spec_driven',
+                aiReliancePercentage: 71,
+                aiToolUsed: 'Cursor Copilot',
+                modeType: 'GitHub PR #345',
+                stabilityRatio: 0.58,
+                tags: ['#DDP', '#Distributed Training', '#Gradient Accumulation'],
+                timeUtc: '16:30 UTC',
+                actionLabel: 'Review Prompt Queue →',
+                dateGroup: 'Earlier in August — 12 Aug',
+                extractedConcepts: [{ topicId: 'distributed_data_parallel', canonicalName: 'Distributed Data Parallel', category: 'Deep Learning', importanceScore: 0.87 }],
+                createdAt: '2026-08-12T16:30:00.000Z'
+              },
+              {
+                entryId: 'entry-telemetry-14',
+                userId: authUser.uid,
+                title: 'Kernel Density Estimation for Non-Parametric Anomaly Thresholds',
+                rawContent: 'Replaced static 3-sigma thresholds with Gaussian KDE over log-transformed latency metrics. Optimized Silverman bandwidth factor to detect multimodal outlier clusters without assumptions of normality.',
+                aiAssistanceLevel: 'none',
+                aiReliancePercentage: 18,
+                modeType: 'Web App',
+                stabilityRatio: 0.85,
+                tags: ['#KDE', '#Non-Parametric Statistics', '#Anomaly Detection'],
+                timeUtc: '09:15 UTC',
+                actionLabel: 'Stable',
+                dateGroup: 'Earlier in August — 09 Aug',
+                extractedConcepts: [{ topicId: 'kernel_density_estimation', canonicalName: 'Kernel Density Estimation', category: 'Statistics & Probability', importanceScore: 0.81 }],
+                createdAt: '2026-08-09T09:15:00.000Z'
+              }
+            ];
+            (global as any).__care_journals_by_user[authUser.uid] = seedJournals;
+          }
+
           const userJournals = (global as any).__care_journals_by_user[authUser.uid] || [];
           const userTopics = (global as any).__care_topics_by_user[authUser.uid] || {};
 
@@ -169,13 +420,24 @@ function apiDevPlugin(): Plugin {
 
                 const entryId = 'entry_' + Math.random().toString(36).substring(2, 11);
                 const createdAt = new Date().toISOString();
+                const modeType = payload.modeType || payload.loggedVia || 'Web App';
+                const reliancePercent = payload.aiReliancePercentage || (payload.aiAssistanceLevel === 'agentic' ? 85 : payload.aiAssistanceLevel === 'spec_driven' ? 78 : payload.aiAssistanceLevel === 'prompt_driven' ? 45 : 12);
+                const stabilityRatio = payload.stabilityRatio || (reliancePercent >= 70 ? 0.34 : reliancePercent >= 40 ? 0.65 : 0.88);
+
                 const newEntry = {
                   entryId,
                   userId: authUser.uid,
                   title: payload.title,
                   rawContent: payload.rawContent,
                   aiAssistanceLevel: payload.aiAssistanceLevel || 'prompt_driven',
+                  aiReliancePercentage: reliancePercent,
                   aiToolUsed: payload.aiToolUsed,
+                  modeType: modeType,
+                  stabilityRatio: stabilityRatio,
+                  tags: payload.tags || extracted.map(c => '#' + c.canonicalName),
+                  timeUtc: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) + ' UTC',
+                  actionLabel: stabilityRatio < 0.55 ? 'Recall Diagnostic →' : 'Stable',
+                  dateGroup: 'Today — ' + new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
                   extractedConcepts: extracted,
                   createdAt,
                 };

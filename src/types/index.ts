@@ -43,7 +43,16 @@ export interface JournalEntry {
   title: string;
   rawContent: string;
   aiAssistanceLevel: AiAssistanceLevel;
+  aiReliancePercentage?: number; // e.g. 85, 45, 78
   aiToolUsed?: string;
+  modeType?: string; // e.g. 'Web App', 'GitHub PR #412', 'Web App / Claude CLI', 'Cursor Extension', etc.
+  stabilityRatio?: number; // e.g. 0.34, 0.78, 0.49 S(t)
+  kernelProfileSnapshot?: string; // e.g. 'KERNEL PROFILE SNAPSHOT'
+  hardwareProfile?: string; // e.g. 'SRAM TILE: 128x128 FP16'
+  tags?: string[]; // e.g. ['#Self-Attention Mechanism', '#FlashAttention-2']
+  timeUtc?: string; // e.g. '14:22 UTC'
+  actionLabel?: string; // e.g. 'Recall Diagnostic →', 'Stable', 'Review Prompt Queue →'
+  dateGroup?: string; // e.g. 'Today — 6 Sept', 'Yesterday — 5 Sept', 'Earlier this week — 2 Sept'
   extractedConcepts: ExtractedConcept[];
   createdAt: string;
 }
