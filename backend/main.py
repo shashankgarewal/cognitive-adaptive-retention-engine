@@ -48,6 +48,9 @@ async def health_check():
         "service": "CARE Engine",
         "environment": settings.ENVIRONMENT,
         "databaseId": settings.FIRESTORE_DATABASE_ID,
+        "vertexAi": settings.USE_VERTEX_AI,
+        "gcpProject": settings.GCP_PROJECT_ID,
+        "location": settings.GCP_LOCATION,
     }
 
 

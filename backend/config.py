@@ -16,7 +16,11 @@ load_dotenv()
 class Settings:
     PROJECT_NAME: str = "CARE - Cognitive & Adaptive Retention Engine"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
-    GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", os.getenv("GOOGLE_CLOUD_PROJECT", "gen-lang-client-0116634243"))
+    USE_VERTEX_AI: bool = os.getenv("USE_VERTEX_AI", "true").lower() in ("true", "1", "yes")
+    GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "care-recall")
+    GCP_LOCATION: str = os.getenv("GCP_LOCATION", "us-central1")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    FALLBACK_MODELS: list = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash", "gemini-3.8-flash"]
     FIRESTORE_DATABASE_ID: str = os.getenv(
         "FIRESTORE_DATABASE_ID",
         "ai-studio-aicuratedrecalls-32bbfc5d-7c54-46b3-883d-c9ead24e489f"

@@ -285,11 +285,21 @@ async def initialize_recall_session(
     )
 
     # 4. Generate EXACTLY ONE initial prompt message from the agent
-    initial_turn = await adk_interviewer.generate_next_turn(
-        topic=target_topic,
-        session=new_session,
-        user_message=None,
-    )
+    try:
+        initial_turn = await adk_interviewer.generate_next_turn(
+            topic=target_topic,
+            session=new_session,
+            user_message=None,
+        )
+    except Exception as e:
+        logger.error(f"Error generating initial recall turn: {e}")
+        fallback_msg = adk_interviewer._fallback_active_recall_turn(target_topic, new_session, None)
+        initial_turn = ChatTurn(
+            role="assistant",
+            message=fallback_msg,
+            timestamp=now_iso,
+        )
+
     new_session.turns = [initial_turn]
 
     # 5. Write session to Firestore (/users/{userId}/recall_sessions/{sessionId})

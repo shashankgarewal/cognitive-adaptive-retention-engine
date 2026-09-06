@@ -51,6 +51,9 @@ function apiDevPlugin(): Plugin {
             service: 'CARE Engine',
             environment: 'development',
             databaseId: 'ai-studio-aicuratedrecalls-32bbfc5d-7c54-46b3-883d-c9ead24e489f',
+            vertexAi: true,
+            gcpProject: 'care-recall',
+            location: 'us-central1',
           }));
           return;
         }

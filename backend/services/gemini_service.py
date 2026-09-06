@@ -6,10 +6,11 @@ Extracts canonical data science concepts, categorizes them, and assigns initial 
 
 import json
 import logging
-from typing import Optional
+from typing import Optional, List
 from google import genai
 from google.genai import types
-from backend.config import get_gemini_api_key
+from google.genai import errors as genai_errors
+from backend.config import settings, get_gemini_api_key
 from backend.models.schemas import ExtractedConceptsResponse, ExtractedConcept, AiAssistanceLevel
 
 logger = logging.getLogger("care.gemini_service")
@@ -32,15 +33,34 @@ class GeminiService:
         self._client: Optional[genai.Client] = None
 
     def _get_client(self) -> Optional[genai.Client]:
-        """Lazy client initialization with secure API key resolution."""
-        if self._client is None:
-            api_key = get_gemini_api_key()
-            if api_key:
-                try:
-                    self._client = genai.Client(api_key=api_key)
-                except Exception as e:
-                    logger.warning(f"Failed to initialize google-genai client: {e}")
-                    self._client = None
+        """Lazy client initialization supporting Vertex AI mode and Google AI Studio API key."""
+        if self._client is not None:
+            return self._client
+
+        # 1. Prefer Vertex AI if configured
+        if settings.USE_VERTEX_AI:
+            try:
+                logger.info(
+                    f"Initializing google-genai Client in Vertex AI mode (project={settings.GCP_PROJECT_ID}, location={settings.GCP_LOCATION})"
+                )
+                self._client = genai.Client(
+                    vertexai=True,
+                    project=settings.GCP_PROJECT_ID,
+                    location=settings.GCP_LOCATION,
+                )
+                return self._client
+            except Exception as e:
+                logger.warning(f"Vertex AI Client initialization error: {e}; attempting fallback to API key.")
+
+        # 2. Fallback to API Key mode
+        api_key = get_gemini_api_key()
+        if api_key:
+            try:
+                self._client = genai.Client(api_key=api_key)
+                return self._client
+            except Exception as e:
+                logger.warning(f"Failed to initialize google-genai Client with API key: {e}")
+
         return self._client
 
     async def extract_concepts_from_journal(
@@ -51,8 +71,9 @@ class GeminiService:
         ai_tool_used: Optional[str] = None,
     ) -> ExtractedConceptsResponse:
         """
-        Extracts structured concepts using Gemini 3.8 Flash with native response_schema enforcement.
-        Falls back to deterministic rule-based extraction if API key is not configured.
+        Extracts structured concepts using Gemini with native response_schema enforcement.
+        Supports Vertex AI and multiple fallback model names (gemini-2.5-flash, gemini-1.5-flash, gemini-2.0-flash, gemini-3.8-flash).
+        Falls back to deterministic rule-based extraction if API calls fail.
         """
         client = self._get_client()
 
@@ -67,24 +88,40 @@ Content:
 Extract canonical concepts, summary, and complexity following the schema."""
 
         if client is not None:
-            try:
-                # Enforce native response_schema using the google-genai SDK
-                response = await client.aio.models.generate_content(
-                    model="gemini-3.8-flash",
-                    contents=user_prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=EXTRACTION_SYSTEM_INSTRUCTION,
-                        response_mime_type="application/json",
-                        response_schema=ExtractedConceptsResponse,
-                        temperature=0.2,
-                    ),
-                )
+            models_to_try: List[str] = []
+            for m in [settings.GEMINI_MODEL] + settings.FALLBACK_MODELS:
+                if m not in models_to_try:
+                    models_to_try.append(m)
 
-                if response.text:
-                    parsed_json = json.loads(response.text)
-                    return ExtractedConceptsResponse(**parsed_json)
-            except Exception as e:
-                logger.error(f"Gemini concept extraction failed: {e}; applying fallback extractor.")
+            last_error = None
+            for model_name in models_to_try:
+                try:
+                    # Enforce native response_schema using the google-genai SDK
+                    response = await client.aio.models.generate_content(
+                        model=model_name,
+                        contents=user_prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=EXTRACTION_SYSTEM_INSTRUCTION,
+                            response_mime_type="application/json",
+                            response_schema=ExtractedConceptsResponse,
+                            temperature=0.2,
+                        ),
+                    )
+
+                    if response.text:
+                        parsed_json = json.loads(response.text)
+                        return ExtractedConceptsResponse(**parsed_json)
+                except Exception as e:
+                    last_error = e
+                    err_str = str(e).lower()
+                    if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
+                        logger.warning(f"Rate limit / quota exceeded for model {model_name}: {e}")
+                        # Don't spin through all models if quota is exhausted
+                        break
+                    logger.warning(f"Gemini concept extraction failed on model {model_name}: {e}; trying next model...")
+
+            if last_error:
+                logger.error(f"All Gemini concept extraction model attempts failed: {last_error}; applying fallback extractor.")
 
         # Fallback deterministic extractor for development / offline environments
         return self._fallback_extract_concepts(title, content, ai_assistance_level)

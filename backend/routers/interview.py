@@ -161,11 +161,28 @@ async def send_interview_message(
         session.turns.append(user_turn)
 
     # 4. Generate next assistant Peer Knowledge Partner turn
-    assistant_turn = await adk_interviewer.generate_next_turn(
-        topic=topic,
-        session=session,
-        user_message=clean_user_message,
-    )
+    try:
+        assistant_turn = await adk_interviewer.generate_next_turn(
+            topic=topic,
+            session=session,
+            user_message=clean_user_message,
+        )
+    except Exception as e:
+        logger.error(f"Error generating interview turn: {e}")
+        err_str = str(e).lower()
+        if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Vertex AI quota exceeded or rate limit reached. Please wait a moment and try again.",
+            )
+        # Fallback to local turn generator
+        fallback_msg = adk_interviewer._fallback_active_recall_turn(topic, session, clean_user_message)
+        assistant_turn = ChatTurn(
+            role="assistant",
+            message=fallback_msg,
+            timestamp=now_iso,
+        )
+
     session.turns.append(assistant_turn)
 
     # 5. Persist updated session to Firestore
@@ -233,8 +250,19 @@ async def evaluate_interview_session(
             category="Data Science",
         )
 
-    # 3. Evaluate session using gemini-3.8-flash structured output
-    evaluation = await adk_interviewer.evaluate_session(topic=topic, session=session)
+    # 3. Evaluate session using Gemini structured output
+    try:
+        evaluation = await adk_interviewer.evaluate_session(topic=topic, session=session)
+    except Exception as e:
+        logger.error(f"Error evaluating interview session: {e}")
+        err_str = str(e).lower()
+        if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Vertex AI quota exceeded or rate limit reached during evaluation. Please wait a moment and retry.",
+            )
+        # Fallback to local scorecard generator
+        evaluation = adk_interviewer._fallback_evaluate_session(topic, session)
 
     # 4. Mark session completed
     now_iso = datetime.utcnow().isoformat()

@@ -13,7 +13,7 @@ from typing import List, Optional, Dict, Any
 from google import genai
 from google.genai import types
 
-from backend.config import get_gemini_api_key
+from backend.config import settings, get_gemini_api_key
 from backend.models.schemas import (
     TopicRetentionState,
     RecallSession,
@@ -66,15 +66,34 @@ class ADKInterviewerService:
         self._client: Optional[genai.Client] = None
 
     def _get_client(self) -> Optional[genai.Client]:
-        """Lazy client initialization with secure API key resolution."""
-        if self._client is None:
-            api_key = get_gemini_api_key()
-            if api_key:
-                try:
-                    self._client = genai.Client(api_key=api_key)
-                except Exception as e:
-                    logger.warning(f"Failed to initialize google-genai client: {e}")
-                    self._client = None
+        """Lazy client initialization supporting Vertex AI mode and Google AI Studio API key."""
+        if self._client is not None:
+            return self._client
+
+        # 1. Prefer Vertex AI if configured
+        if settings.USE_VERTEX_AI:
+            try:
+                logger.info(
+                    f"Initializing ADKInterviewer Client in Vertex AI mode (project={settings.GCP_PROJECT_ID}, location={settings.GCP_LOCATION})"
+                )
+                self._client = genai.Client(
+                    vertexai=True,
+                    project=settings.GCP_PROJECT_ID,
+                    location=settings.GCP_LOCATION,
+                )
+                return self._client
+            except Exception as e:
+                logger.warning(f"Vertex AI Client initialization error in ADKInterviewer: {e}; attempting fallback to API key.")
+
+        # 2. Fallback to API Key mode
+        api_key = get_gemini_api_key()
+        if api_key:
+            try:
+                self._client = genai.Client(api_key=api_key)
+                return self._client
+            except Exception as e:
+                logger.warning(f"Failed to initialize google-genai Client with API key: {e}")
+
         return self._client
 
     async def generate_next_turn(
@@ -84,7 +103,7 @@ class ADKInterviewerService:
         user_message: Optional[str] = None,
     ) -> ChatTurn:
         """
-        Generates the next Peer Knowledge Partner active recall turn using gemini-3.8-flash.
+        Generates the next Peer Knowledge Partner active recall turn.
         If session has no turns, generates a customized opening probe.
         Otherwise evaluates the user's latest message in context of previous turns.
         """
@@ -124,24 +143,34 @@ class ADKInterviewerService:
             )
 
         if client is not None:
-            try:
-                response = await client.aio.models.generate_content(
-                    model="gemini-3.8-flash",
-                    contents=user_prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=PEER_KNOWLEDGE_PARTNER_SYSTEM_INSTRUCTION,
-                        temperature=0.35,
-                        max_output_tokens=350,
-                    ),
-                )
-                if response.text and response.text.strip():
-                    return ChatTurn(
-                        role="assistant",
-                        message=response.text.strip(),
-                        timestamp=now_iso,
+            models_to_try: List[str] = []
+            for m in [settings.GEMINI_MODEL] + settings.FALLBACK_MODELS:
+                if m not in models_to_try:
+                    models_to_try.append(m)
+
+            for model_name in models_to_try:
+                try:
+                    response = await client.aio.models.generate_content(
+                        model=model_name,
+                        contents=user_prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=PEER_KNOWLEDGE_PARTNER_SYSTEM_INSTRUCTION,
+                            temperature=0.35,
+                            max_output_tokens=350,
+                        ),
                     )
-            except Exception as e:
-                logger.error(f"Gemini Peer Knowledge Partner turn generation failed: {e}; applying fallback generator.")
+                    if response.text and response.text.strip():
+                        return ChatTurn(
+                            role="assistant",
+                            message=response.text.strip(),
+                            timestamp=now_iso,
+                        )
+                except Exception as e:
+                    err_str = str(e).lower()
+                    if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
+                        logger.warning(f"Rate limit / quota exceeded for model {model_name} in turn generation: {e}")
+                        break
+                    logger.warning(f"Turn generation failed on model {model_name}: {e}; trying next model...")
 
         # Deterministic fallback when Gemini API key is missing or calls fail
         fallback_msg = self._fallback_active_recall_turn(topic, session, user_message)
@@ -157,7 +186,7 @@ class ADKInterviewerService:
         session: RecallSession,
     ) -> RecallEvaluation:
         """
-        Evaluates completed active recall session using gemini-3.8-flash
+        Evaluates completed active recall session using Gemini
         with native response_schema=RecallEvaluation.
         """
         client = self._get_client()
@@ -181,22 +210,32 @@ Active Recall Transcript:
 Assess the engineer's depth of retention, identify knowledge gaps, and formulate actionable retention tips following the schema."""
 
         if client is not None:
-            try:
-                response = await client.aio.models.generate_content(
-                    model="gemini-3.8-flash",
-                    contents=user_prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=EVALUATION_SYSTEM_INSTRUCTION,
-                        response_mime_type="application/json",
-                        response_schema=RecallEvaluation,
-                        temperature=0.2,
-                    ),
-                )
-                if response.text:
-                    parsed = json.loads(response.text)
-                    return RecallEvaluation(**parsed)
-            except Exception as e:
-                logger.error(f"Gemini recall evaluation failed: {e}; applying deterministic scorecard fallback.")
+            models_to_try: List[str] = []
+            for m in [settings.GEMINI_MODEL] + settings.FALLBACK_MODELS:
+                if m not in models_to_try:
+                    models_to_try.append(m)
+
+            for model_name in models_to_try:
+                try:
+                    response = await client.aio.models.generate_content(
+                        model=model_name,
+                        contents=user_prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=EVALUATION_SYSTEM_INSTRUCTION,
+                            response_mime_type="application/json",
+                            response_schema=RecallEvaluation,
+                            temperature=0.2,
+                        ),
+                    )
+                    if response.text:
+                        parsed = json.loads(response.text)
+                        return RecallEvaluation(**parsed)
+                except Exception as e:
+                    err_str = str(e).lower()
+                    if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
+                        logger.warning(f"Rate limit / quota exceeded for model {model_name} in evaluation: {e}")
+                        break
+                    logger.warning(f"Recall evaluation failed on model {model_name}: {e}; trying next model...")
 
         # Fallback scorecard
         return self._fallback_evaluate_session(topic, session)
