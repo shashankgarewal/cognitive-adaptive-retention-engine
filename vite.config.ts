@@ -121,8 +121,15 @@ function apiDevPlugin(): Plugin {
           if (!(global as any).__care_journals_by_user) (global as any).__care_journals_by_user = {};
           if (!(global as any).__care_topics_by_user) (global as any).__care_topics_by_user = {};
 
-          // Initialize with 14 telemetry journals matching the specification if not yet initialized
+          // Initialize with clean empty collections for new accounts to prevent dummy data leakage
           if (!(global as any).__care_journals_by_user[authUser.uid]) {
+            (global as any).__care_journals_by_user[authUser.uid] = [];
+          }
+          if (!(global as any).__care_topics_by_user[authUser.uid]) {
+            (global as any).__care_topics_by_user[authUser.uid] = {};
+          }
+
+          if (false && !(global as any).__care_journals_by_user[authUser.uid]) {
             const seedJournals = [
               {
                 entryId: 'entry-telemetry-01',
