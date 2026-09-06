@@ -32,18 +32,23 @@ import { TopicRetentionList } from './TopicRetentionList';
 import { TopicSelectionModal } from '../recall/TopicSelectionModal';
 import { TopicPreSessionCard } from '../recall/TopicPreSessionCard';
 import { RecallSessionModal } from '../recall/RecallSessionModal';
+import { ZeroStateDashboard } from './ZeroStateDashboard';
+import { Header } from '../layout/Header';
 
 interface WorkspaceHomeProps {
   onOpenAuth: () => void;
+  onViewLanding?: () => void;
+  onOpenSpec?: () => void;
 }
 
-export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
+export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth, onViewLanding, onOpenSpec }) => {
   const { user, profile, refreshProfile } = useAuth();
   const [showJournalForm, setShowJournalForm] = useState(false);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [topics, setTopics] = useState<TopicRetentionState[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [selectedConcept, setSelectedConcept] = useState<ExtractedConcept | null>(null);
+  const [forceZeroState, setForceZeroState] = useState(false);
 
   // Slice 3 & 4: Recall Engine & Peer Knowledge Partner states
   const [showTopicSelectModal, setShowTopicSelectModal] = useState(false);
@@ -114,23 +119,62 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
     }
   };
 
+  // Render the Authenticated Zero-State dashboard when there are no journal entries or forced
+  if (entries.length === 0 || forceZeroState) {
+    return (
+      <ZeroStateDashboard
+        onLogJournalSuccess={handleJournalSuccess}
+        onViewLanding={onViewLanding}
+        onOpenAuth={onOpenAuth}
+        entriesCount={entries.length}
+        onToggleToPopulated={entries.length > 0 ? () => setForceZeroState(false) : undefined}
+        onOpenSpec={onOpenSpec}
+        onSelectNav={(nav) => {
+          if (nav === 'spec' && onOpenSpec) {
+            onOpenSpec();
+          }
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Top Banner / Hero */}
-      <div className="bg-stone-900 border border-stone-800 rounded-xl p-6 relative overflow-hidden shadow-sm">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/25 rounded-md text-xs text-emerald-400 font-mono mb-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Slice 2 Active: Journal Ingestion & Gemini Concept Extraction
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-stone-100">
-              {user ? (
-                <>Welcome, <span className="text-emerald-400">{profile?.displayName || user.email?.split('@')[0]}</span></>
-              ) : (
-                <>Adaptive Retention for <span className="text-emerald-400">Data Science Workflows</span></>
-              )}
-            </h1>
+    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col font-sans">
+      <Header onOpenAuth={onOpenAuth} onViewLanding={onViewLanding} />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 flex-1 w-full">
+        {/* Top Banner / Hero */}
+        <div className="bg-stone-900 border border-stone-800 rounded-xl p-6 relative overflow-hidden shadow-sm">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="max-w-2xl">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/25 rounded-md text-xs text-emerald-400 font-mono">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Continuous Mastery Engine Active
+                </div>
+                {onOpenSpec && (
+                  <button
+                    type="button"
+                    onClick={onOpenSpec}
+                    className="px-2.5 py-1 rounded-md bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 font-mono text-xs transition-colors cursor-pointer"
+                  >
+                    System Architecture Spec &rarr;
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setForceZeroState(true)}
+                  className="px-2.5 py-1 rounded-md bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700 font-mono text-xs transition-colors cursor-pointer"
+                >
+                  Inspect Zero-State Spec
+                </button>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-stone-100">
+                {user ? (
+                  <>Welcome, <span className="text-emerald-400">{profile?.displayName || user.email?.split('@')[0]}</span></>
+                ) : (
+                  <>Adaptive Retention for <span className="text-emerald-400">Data Science Workflows</span></>
+                )}
+              </h1>
             <p className="text-sm sm:text-base text-stone-400 mt-2 leading-relaxed">
               Counteracting AI-assisted technical knowledge decay. Log your daily work notes with AI reliance signals;
               Gemini 3.8 Flash extracts core canonical concepts and updates your decay priority scores.
@@ -640,5 +684,6 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
         </div>
       </div>
     </div>
+  </div>
   );
 };

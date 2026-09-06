@@ -10,19 +10,18 @@ import { Header } from './components/layout/Header';
 import { WorkspaceHome } from './components/dashboard/WorkspaceHome';
 import { AuthModal } from './components/auth/AuthModal';
 import { LandingPage } from './components/landing/LandingPage';
+import { ArchitectureSpecPage } from './components/spec/ArchitectureSpecPage';
 
 function MainLayout() {
   const { user, loading } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  // View toggle: if user is authenticated, default to 'workspace', else 'landing'
-  const [activeView, setActiveView] = useState<'landing' | 'workspace'>('landing');
+  // View toggle: defaults to 'spec' (System Architecture & Technical Spec Page)
+  const [activeView, setActiveView] = useState<'landing' | 'workspace' | 'spec'>('spec');
 
-  // When user logs in or out, align the view appropriately
+  // When user logs in, if they were on 'landing', transition to 'workspace'
   useEffect(() => {
-    if (user) {
+    if (user && activeView === 'landing') {
       setActiveView('workspace');
-    } else {
-      setActiveView('landing');
     }
   }, [user]);
 
@@ -40,13 +39,20 @@ function MainLayout() {
     );
   }
 
-  // If user is unauthenticated or explicitly requested the public landing page:
-  if (!user || activeView === 'landing') {
+  // System Architecture & Technical Spec View
+  if (activeView === 'spec') {
     return (
       <>
-        <LandingPage
-          onOpenWorkspace={() => setActiveView('workspace')}
-          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        <ArchitectureSpecPage
+          onSelectNav={(nav) => {
+            if (nav === 'spec') {
+              setActiveView('spec');
+            } else {
+              setActiveView('workspace');
+            }
+          }}
+          onViewLanding={() => setActiveView('landing')}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
         />
         <AuthModal
           isOpen={isAuthModalOpen}
@@ -56,24 +62,33 @@ function MainLayout() {
     );
   }
 
-  // Authenticated workspace view
+  // Public Landing Page View
+  if (activeView === 'landing') {
+    return (
+      <>
+        <LandingPage
+          onOpenWorkspace={() => setActiveView('workspace')}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onOpenSpec={() => setActiveView('spec')}
+        />
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+        />
+      </>
+    );
+  }
+
+  // Authenticated/Interactive Workspace View
   return (
-    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col font-sans selection:bg-emerald-500/20 selection:text-emerald-300">
-      <Header
-        onOpenAuth={() => setIsAuthModalOpen(true)}
-        onViewLanding={() => setActiveView('landing')}
-      />
+    <div className="min-h-screen bg-[#FAF8F5] text-[#1E293B] flex flex-col font-sans selection:bg-emerald-500/20 selection:text-emerald-900">
       <main className="flex-1">
-        <WorkspaceHome onOpenAuth={() => setIsAuthModalOpen(true)} />
+        <WorkspaceHome
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onViewLanding={() => setActiveView('landing')}
+          onOpenSpec={() => setActiveView('spec')}
+        />
       </main>
-      <footer className="border-t border-stone-850 py-6 px-4 sm:px-6 lg:px-8 text-center text-xs text-stone-500">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>CARE • Cognitive & Adaptive Retention Engine for Data Science Workflows</span>
-          <span className="font-mono text-[11px] text-stone-600">
-            CARE Architecture • React 19 + FastAPI + Firestore + Gemini 3.8 Flash
-          </span>
-        </div>
-      </footer>
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}

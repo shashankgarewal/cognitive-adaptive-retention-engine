@@ -10,11 +10,13 @@ import { Terminal, ShieldCheck, ArrowRight, UserCheck, LogOut } from 'lucide-rea
 interface LandingHeaderProps {
   onSignInClick: () => void;
   onOpenWorkspace?: () => void;
+  onOpenSpec?: () => void;
 }
 
 export const LandingHeader: React.FC<LandingHeaderProps> = ({
   onSignInClick,
   onOpenWorkspace,
+  onOpenSpec,
 }) => {
   const { user, profile, signOut } = useAuth();
 
@@ -49,12 +51,23 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
           >
             Features
           </a>
-          <a
-            href="#architecture"
-            className="hover:text-slate-950 transition-colors py-1"
-          >
-            System Architecture
-          </a>
+          {onOpenSpec ? (
+            <button
+              type="button"
+              onClick={onOpenSpec}
+              className="hover:text-[#006948] text-[#006948] font-semibold transition-colors py-1 cursor-pointer flex items-center gap-1"
+            >
+              <span>System Architecture &amp; Spec</span>
+              <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-emerald-100">Live</span>
+            </button>
+          ) : (
+            <a
+              href="#architecture"
+              className="hover:text-slate-950 transition-colors py-1"
+            >
+              System Architecture
+            </a>
+          )}
           <a
             href="#security"
             className="hover:text-slate-950 transition-colors py-1"

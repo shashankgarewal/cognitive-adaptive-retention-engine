@@ -15,11 +15,13 @@ import { PrivacyAndFooter } from './PrivacyAndFooter';
 interface LandingPageProps {
   onOpenWorkspace?: () => void;
   onOpenAuthModal?: () => void;
+  onOpenSpec?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   onOpenWorkspace,
   onOpenAuthModal,
+  onOpenSpec,
 }) => {
   const [authMode, setAuthMode] = useState<'signup' | 'signin'>('signup');
 
@@ -44,6 +46,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <LandingHeader
         onSignInClick={handleSignInClick}
         onOpenWorkspace={onOpenWorkspace}
+        onOpenSpec={onOpenSpec}
       />
 
       {/* Main Page Flow */}
