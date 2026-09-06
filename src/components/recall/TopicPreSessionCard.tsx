@@ -37,12 +37,6 @@ export const TopicPreSessionCard: React.FC<TopicPreSessionCardProps> = ({
   onClose,
   onSessionInitialized,
 }) => {
-  const [targetDepth, setTargetDepth] = useState<'foundational' | 'intermediate' | 'advanced'>('intermediate');
-  const [customFocusArea, setCustomFocusArea] = useState('');
-  const [isInitializing, setIsInitializing] = useState(false);
-  const [initializedSession, setInitializedSession] = useState<RecallSession | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
   // Compute breakdown client-side or display pre-calculated fields
   const lastEvent = topic.lastRecallAt || topic.lastLoggedAt;
   const elapsedDays = Math.max(0.1, (Date.now() - new Date(lastEvent).getTime()) / (1000 * 86400));
@@ -66,6 +60,21 @@ export const TopicPreSessionCard: React.FC<TopicPreSessionCardProps> = ({
     topic.lastRecallScore,
     topic.fragileSubconcept || topic.explanationReason
   );
+
+  // Compute adaptive depth dynamically:
+  // If decay priority > 60% OR AI reliance > 70%: Target deeper architectural trade-offs and edge cases
+  // Else: Target practical runtime intuition and implementation trade-offs
+  const isHighRisk = priorityScore > 60 || A_signal * 100 > 70;
+  const computedAdaptiveDepth: 'foundational' | 'intermediate' | 'advanced' = isHighRisk ? 'advanced' : 'intermediate';
+  const defaultFocus = isHighRisk
+    ? `Deeper architectural trade-offs and edge cases: ${fragility.fragileSubconcept}`
+    : `Practical runtime intuition and implementation trade-offs: ${fragility.fragileSubconcept}`;
+
+  const [targetDepth, setTargetDepth] = useState<'foundational' | 'intermediate' | 'advanced'>(computedAdaptiveDepth);
+  const [customFocusArea, setCustomFocusArea] = useState(defaultFocus);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [initializedSession, setInitializedSession] = useState<RecallSession | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Determine dominant rationale badge
   let rationaleBadge = 'Stable Baseline';

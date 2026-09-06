@@ -12,6 +12,8 @@ interface JournalEditorCanvasProps {
   wordsCount: number;
   charsCount: number;
   readTimeMin: number;
+  todayEntriesCount?: number;
+  totalEntriesCount?: number;
 }
 
 export const JournalEditorCanvas: React.FC<JournalEditorCanvasProps> = ({
@@ -24,6 +26,8 @@ export const JournalEditorCanvas: React.FC<JournalEditorCanvasProps> = ({
   wordsCount,
   charsCount,
   readTimeMin,
+  todayEntriesCount = 0,
+  totalEntriesCount = 0,
 }) => {
   return (
     <div className="flex-1 flex flex-col bg-white rounded-2xl border border-[#E5E0D8] shadow-xs overflow-hidden">
@@ -39,7 +43,9 @@ export const JournalEditorCanvas: React.FC<JournalEditorCanvasProps> = ({
             LLM Inference System Architecture
           </span>
           <span className="text-slate-300">•</span>
-          <span className="text-slate-500">Oct 24, 2026 • 16:42 UTC</span>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#ECFDF5] border border-emerald-200 text-[#006948] font-bold">
+            Today&apos;s Entries: {todayEntriesCount}
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -126,6 +132,10 @@ export const JournalEditorCanvas: React.FC<JournalEditorCanvasProps> = ({
           <span className="text-[#006948] font-semibold flex items-center gap-1">
             <Cpu className="w-3.5 h-3.5" />
             AST Engine: {extractedConceptsList.length} concepts extracted
+          </span>
+          <span className="text-slate-300">•</span>
+          <span className="text-[#006948] font-semibold">
+            Today: {todayEntriesCount} recorded
           </span>
           <span className="text-slate-300">•</span>
           <span>{wordsCount} words</span>

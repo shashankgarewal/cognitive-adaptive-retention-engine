@@ -581,6 +581,94 @@ export const firestoreService = {
   },
 
   /**
+   * Updates an existing journal entry in Firestore under /users/{userId}/journal_entries/{entryId}.
+   */
+  async updateJournalEntry(
+    userId: string,
+    entryId: string,
+    payload: {
+      title: string;
+      rawContent: string;
+      aiAssistanceLevel: AiAssistanceLevel;
+      aiToolUsed?: string;
+      modeType?: string;
+      stabilityRatio?: number;
+      tags?: string[];
+    }
+  ): Promise<{
+    entry: JournalEntry;
+    extractedConcepts: ExtractedConcept[];
+    updatedTopics: TopicRetentionState[];
+  }> {
+    if (!userId || !entryId) throw new Error('User ID and Entry ID required for Firestore update');
+
+    const reliancePct =
+      payload.aiAssistanceLevel === 'agentic'
+        ? 85
+        : payload.aiAssistanceLevel === 'spec_driven'
+        ? 78
+        : payload.aiAssistanceLevel === 'prompt_driven'
+        ? 45
+        : 12;
+
+    const stabilityRatio = payload.stabilityRatio ?? (reliancePct >= 70 ? 0.34 : reliancePct >= 40 ? 0.65 : 0.88);
+    const actionLabel = stabilityRatio < 0.55 ? 'Recall Diagnostic →' : 'Stable';
+
+    // 1. Extract concepts
+    const concepts = extractConceptsLocally(payload.title, payload.rawContent, payload.aiAssistanceLevel);
+
+    // 2. Build updated entry fields
+    const updatedFields: Record<string, any> = {
+      title: payload.title.trim(),
+      rawContent: payload.rawContent.trim(),
+      aiAssistanceLevel: payload.aiAssistanceLevel,
+      aiReliancePercentage: reliancePct,
+      modeType: payload.modeType || 'Web App',
+      stabilityRatio,
+      tags: payload.tags && payload.tags.length > 0 ? payload.tags : concepts.map((c) => `#${c.canonicalName}`),
+      actionLabel,
+      extractedConcepts: concepts,
+      updatedAt: new Date().toISOString(),
+    };
+    if (payload.aiToolUsed && payload.aiToolUsed.trim()) {
+      updatedFields.aiToolUsed = payload.aiToolUsed.trim();
+    }
+
+    const entryPath = `users/${userId}/journal_entries/${entryId}`;
+    console.log(`[FIRESTORE UPDATE] [UID: ${userId}] Updating setDoc(merge) to path: ${entryPath}`);
+    const entryDocRef = doc(db, 'users', userId, 'journal_entries', entryId);
+    try {
+      await withTimeout(
+        setDoc(entryDocRef, stripUndefinedDeep(updatedFields), { merge: true }),
+        15000,
+        `setDoc merge timeout on path ${entryPath}`
+      );
+    } catch (err: any) {
+      console.warn(`[FIRESTORE UPDATE WARNING] ${err.message || err}`);
+    }
+
+    return {
+      entry: {
+        entryId,
+        userId,
+        title: payload.title,
+        rawContent: payload.rawContent,
+        aiAssistanceLevel: payload.aiAssistanceLevel,
+        aiReliancePercentage: reliancePct,
+        aiToolUsed: payload.aiToolUsed,
+        modeType: payload.modeType || 'Web App',
+        stabilityRatio,
+        tags: updatedFields.tags,
+        actionLabel,
+        extractedConcepts: concepts,
+        createdAt: new Date().toISOString(),
+      },
+      extractedConcepts: concepts,
+      updatedTopics: [],
+    };
+  },
+
+  /**
    * Fetches all topics for the given userId from Firestore with recalculated priority.
    */
   async getUserTopics(userId: string): Promise<TopicRetentionState[]> {
@@ -641,12 +729,14 @@ export const firestoreService = {
 
   /**
    * Initializes an active recall session doc in Firestore under /users/{userId}/recall_sessions/{sessionId}.
+   * Dynamically evaluates adaptive depth and auto-injects fragile subconcept nuances.
    */
   async initRecallSession(
     userId: string,
     topicId: string,
-    targetDepth: 'foundational' | 'intermediate' | 'advanced' = 'intermediate',
-    customFocusArea?: string
+    targetDepth?: 'foundational' | 'intermediate' | 'advanced',
+    customFocusArea?: string,
+    topicName?: string
   ): Promise<{ session: RecallSession; topic: TopicRetentionState; breakdown: any }> {
     const topicPath = `users/${userId}/topic_retention_states/${topicId}`;
     console.log(`[FIRESTORE READ] [UID: ${userId}] Fetching topic state for session init at path: ${topicPath}`);
@@ -662,12 +752,16 @@ export const firestoreService = {
     let topic: TopicRetentionState;
     if (snap && snap.exists && snap.exists()) {
       topic = snap.data() as TopicRetentionState;
+      if (topicName && (!topic.canonicalName || topic.canonicalName === 'Concept')) {
+        topic.canonicalName = topicName;
+      }
     } else {
-      // Fallback baseline topic
+      // Fallback baseline topic using provided topicName or derived name
+      const cleanCanonical = topicName?.trim() || topicId.replace(/^custom_/, '').replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
       topic = {
         topicId,
         userId,
-        canonicalName: topicId.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+        canonicalName: cleanCanonical,
         category: 'Data Science & Systems',
         firstLoggedAt: new Date().toISOString(),
         lastLoggedAt: new Date().toISOString(),
@@ -683,6 +777,27 @@ export const firestoreService = {
     }
 
     const calc = calculateTopicPriority(topic);
+    const priority = calc.priorityScore;
+    const aiReliancePercent = (topic.effectiveAiAssistanceWeight || 0.5) * 100;
+    const isHighRisk = priority > 60 || aiReliancePercent > 70;
+
+    const fragility = getDescriptiveFragileSubconcept(
+      topic.canonicalName,
+      topic.category,
+      topic.effectiveAiAssistanceWeight,
+      topic.lastRecallScore,
+      topic.fragileSubconcept || topic.explanationReason
+    );
+
+    const resolvedDepth: 'foundational' | 'intermediate' | 'advanced' =
+      targetDepth || (isHighRisk ? 'advanced' : 'intermediate');
+
+    const resolvedFocus =
+      customFocusArea ||
+      (isHighRisk
+        ? `Deeper architectural trade-offs and edge cases: ${fragility.fragileSubconcept}`
+        : `Practical runtime intuition and implementation trade-offs: ${fragility.fragileSubconcept}`);
+
     const breakdown = {
       priorityScore: calc.priorityScore,
       T_decay: calc.T_decay,
@@ -690,8 +805,10 @@ export const firestoreService = {
       A_signal: calc.A_signal,
       H_weakness: calc.H_weakness,
       M_freq: calc.M_freq,
-      rationaleBadge: calc.A_signal >= 0.75 ? 'High AI Reliance' : 'Time Decay Alert',
+      rationaleBadge: calc.A_signal >= 0.75 ? 'High AI Reliance' : isHighRisk ? 'High Decay Priority' : 'Time Decay Alert',
       explanationReason: calc.explanationReason,
+      fragileNuance: fragility.fragileSubconcept,
+      cognitiveLossRisk: fragility.cognitiveLossRisk,
     };
 
     const sessionId = `session_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`;
@@ -702,8 +819,8 @@ export const firestoreService = {
       topicId: topic.topicId,
       topicName: topic.canonicalName,
       status: 'in_progress',
-      targetDepth,
-      customFocusArea,
+      targetDepth: resolvedDepth,
+      customFocusArea: resolvedFocus,
       initialBreakdown: breakdown,
       turns: [],
       startedAt: new Date().toISOString(),
@@ -721,7 +838,8 @@ export const firestoreService = {
   },
 
   /**
-   * Appends user and partner turns to the recall session.
+   * Appends user and peer colleague turns to the recall session.
+   * Adopts an approachable senior technical peer persona.
    */
   async sendRecallMessage(
     userId: string,
@@ -756,21 +874,36 @@ export const firestoreService = {
     const topicName = session.topicName || 'this concept';
     const depth = session.targetDepth || 'intermediate';
 
+    const fragility = getDescriptiveFragileSubconcept(
+      topicName,
+      'Data Science & Systems',
+      undefined,
+      undefined,
+      session.customFocusArea
+    );
+
     let partnerResponse = '';
     if (turnCount === 0 || (turnCount === 1 && userMessage)) {
-      if (depth === 'foundational') {
-        partnerResponse = `Welcome to this active recall session on ${topicName}. As your Peer Knowledge Partner, walk me through the intuitive problem statement: why do we need ${topicName}, and what breaks down if we use classical baselines instead?`;
+      if (
+        session.customFocusArea &&
+        session.customFocusArea.length > 20 &&
+        !session.customFocusArea.startsWith('Deeper architectural') &&
+        !session.customFocusArea.startsWith('Practical runtime')
+      ) {
+        partnerResponse = `Hey! Let's explore your topic: "${session.customFocusArea}". Walk me through your mental model and first principles: what are the primary engineering trade-offs, constraints, or failure modes you'd look out for in production?`;
       } else if (depth === 'advanced') {
-        partnerResponse = `Let's dive straight into ${topicName}. From a mathematical formulation standpoint, what objective function or loss surfaces dictate its convergence, and how does the architecture prevent gradient instability or degenerate representations?`;
+        partnerResponse = `Hey! Taking a look at your recent engineering work around ${topicName}—let's look at the architectural constraints and failure modes. Especially regarding ${fragility.fragileSubconcept || 'the core invariants'}, what's the most critical boundary condition or edge case in your implementation, and how do you ensure numerical stability?`;
+      } else if (depth === 'foundational') {
+        partnerResponse = `Hey! I was just reviewing your recent work log involving ${topicName}. Walk me through the core intuition: what problem are you solving here, and what breaks down if we stick with a simpler classical approach?`;
       } else {
-        partnerResponse = `Welcome. As your Peer Knowledge Partner, let's examine ${topicName}. Walk me through its primary algorithmic mechanism: what inputs does it transform, and what fundamental trade-off does it make between representational capacity and computational efficiency?`;
+        partnerResponse = `Hey! I saw your recent work log on ${topicName}. If we were reviewing this together in a design doc, how would you describe the primary trade-off between implementation complexity and runtime performance regarding ${fragility.fragileSubconcept || 'the core mechanics'}?`;
       }
     } else if (turnCount <= 3) {
-      partnerResponse = `That's a sound formulation. Let's probe the mechanics deeper: when you tune hyperparameters or loss coefficients for ${topicName}, which parameter directly controls this sensitivity, and what happens mathematically during gradient updates if that parameter is set an order of magnitude too high?`;
+      partnerResponse = `That's a really solid point. Pushing a layer deeper on ${topicName}: when you tune key hyperparameters or configure the data pipeline, what specific invariant or threshold dictates sensitivity, and what happens during execution if that boundary is breached?`;
     } else if (turnCount <= 5) {
-      partnerResponse = `Great observation regarding the dynamics. Now consider a real-world edge case: suppose your production input distribution shifts significantly or contains high-sparsity anomalies. Under what specific conditions does ${topicName} fail silently, and how would you verify this in telemetry?`;
+      partnerResponse = `Makes sense. Let's consider a production failure mode: suppose feature distribution shifts or concurrency increases under high load. How does ${topicName} behave in that scenario, and how would you verify safety in system telemetry?`;
     } else {
-      partnerResponse = `To wrap up our technical deep dive into ${topicName}: if you had to mentor a colleague on avoiding the single most dangerous misconception when implementing or fine-tuning this, what would that core takeaway be?`;
+      partnerResponse = `Great discussion on ${topicName}. If you had to mentor a teammate on the single most dangerous architectural pitfall or misconception when using this in production, what would your primary guidance be?`;
     }
 
     const assistantTurn: ChatTurn = {

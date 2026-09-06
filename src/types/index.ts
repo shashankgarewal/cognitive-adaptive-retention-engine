@@ -178,6 +178,7 @@ export interface RecallTopicsQueryResponse {
 
 export interface RecallSessionInitPayload {
   topicId: string;
+  topicName?: string;
   targetDepth?: 'foundational' | 'intermediate' | 'advanced';
   customFocusArea?: string;
 }

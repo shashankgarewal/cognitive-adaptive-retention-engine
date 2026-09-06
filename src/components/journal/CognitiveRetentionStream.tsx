@@ -262,7 +262,7 @@ export const CognitiveRetentionStream: React.FC<CognitiveRetentionStreamProps> =
 
       {/* 2. Sub-Header & Telemetry Stream Bar */}
       <div className="border-b border-[#E5E0D8] bg-white/80 backdrop-blur-xs py-3 px-4 sm:px-6 lg:px-8 sticky top-16 z-30 shadow-2xs">
-        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
             <div>
@@ -283,7 +283,7 @@ export const CognitiveRetentionStream: React.FC<CognitiveRetentionStreamProps> =
       </div>
 
       {/* 3. Dynamic Telemetry Metric Overview & Filter Section */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2 w-full space-y-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2 w-full space-y-4">
         {/* Dynamic 3-Card Metric Overview Row */}
         <ZeroStateMetricCards entriesCount={entries.length} topics={topics} entries={entries} />
 
@@ -447,7 +447,7 @@ export const CognitiveRetentionStream: React.FC<CognitiveRetentionStreamProps> =
       </div>
 
       {/* 4. Main Progressive Journal Feed Stream */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex-1 w-full space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex-1 w-full space-y-6">
         {filteredEntries.length === 0 ? (
           <div className="bg-white rounded-2xl border border-[#E5E0D8] p-12 text-center shadow-2xs">
             <BookOpen className="w-10 h-10 text-slate-400 mx-auto mb-3" />

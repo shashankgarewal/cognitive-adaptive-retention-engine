@@ -1,21 +1,15 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import {
   TopicRetentionState,
   RecallSession,
-  JournalEntry,
-  ExtractedConcept,
 } from '../types';
 import { getDescriptiveFragileSubconcept } from '../lib/retentionFragility';
-import { recordRecallCompletion } from '../lib/streakService';
 import { AppNavbar } from '../components/layout/AppNavbar';
 import { AppFooter } from '../components/layout/AppFooter';
-import { TopicPreSessionCard } from '../components/recall/TopicPreSessionCard';
 import { TopicSelectionModal } from '../components/recall/TopicSelectionModal';
-import { RecallSessionModal } from '../components/recall/RecallSessionModal';
-import { JournalEntryForm } from '../components/journal/JournalEntryForm';
 import {
   Brain,
   Layers,
@@ -34,6 +28,7 @@ import {
   Check,
   Flame,
   Plus,
+  X,
 } from 'lucide-react';
 
 interface ConceptCardData {
@@ -142,6 +137,7 @@ export const RetentionHubPage: React.FC = () => {
   const [sortOption, setSortOption] = useState<'priority' | 'reliance' | 'recency'>('priority');
   const [viewMode, setViewMode] = useState<'grid' | 'matrix'>('grid');
   const [dockInput, setDockInput] = useState('');
+  const dockInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -155,9 +151,6 @@ export const RetentionHubPage: React.FC = () => {
 
   // Socratic recall interactive modal state
   const [showTopicSelectModal, setShowTopicSelectModal] = useState(false);
-  const [selectedTopicForPreSession, setSelectedTopicForPreSession] = useState<TopicRetentionState | null>(null);
-  const [activeRecallSession, setActiveRecallSession] = useState<RecallSession | null>(null);
-  const [activeRecallTopic, setActiveRecallTopic] = useState<TopicRetentionState | null>(null);
 
   const fetchTopics = useCallback(async () => {
     if (!user) {
@@ -165,10 +158,28 @@ export const RetentionHubPage: React.FC = () => {
       setIsLoading(false);
       return;
     }
+    // Instantly load from cache
+    try {
+      const cached = localStorage.getItem(`care_topics_${user.uid}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTopics(parsed);
+          setIsLoading(false);
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     setIsLoading(true);
     try {
       const res = await api.getTopics();
-      setTopics(res.topics || []);
+      const freshTopics = res.topics || [];
+      setTopics(freshTopics);
+      try {
+        localStorage.setItem(`care_topics_${user.uid}`, JSON.stringify(freshTopics));
+      } catch {}
     } catch (err) {
       console.warn('Failed to load topics in Retention Hub:', err);
     } finally {
@@ -180,48 +191,29 @@ export const RetentionHubPage: React.FC = () => {
     fetchTopics();
   }, [fetchTopics]);
 
-  const handleStartRecallSession = (conceptTitle: string, score: number) => {
-    // Check if topic exists in state
-    const existing = topics.find((t) => (t.canonicalName || '').toLowerCase() === conceptTitle.toLowerCase());
-    if (existing) {
-      setSelectedTopicForPreSession(existing);
-    } else {
-      // Mock topic object to launch instant recall
-      const syntheticTopic: TopicRetentionState = {
-        topicId: `synth-${Date.now()}`,
-        userId: user?.uid || 'guest',
-        canonicalName: conceptTitle,
-        category: 'Data Science & Systems',
-        firstLoggedAt: new Date().toISOString(),
-        lastLoggedAt: new Date().toISOString(),
-        journalOccurrences: 4,
-        recentAiAssistanceSignals: score < 60 ? ['agentic'] : ['prompt_driven'],
-        effectiveAiAssistanceWeight: (100 - score) / 100,
-        recallHistory: [],
-        lastRecallScore: score,
-        currentPriorityScore: (100 - score) / 100,
-        decayFactor: score < 60 ? 0.72 : 0.28,
-        explanationReason: 'High AI assistance exposure detected in recent code diff snapshots.',
-      };
-      setSelectedTopicForPreSession(syntheticTopic);
+  const handleStartRecallSession = (conceptTitle: string) => {
+    navigate(`/recall?topic=${encodeURIComponent(conceptTitle)}`);
+  };
+
+  const handleDockInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setDockInput(e.target.value);
+    if (dockInputRef.current) {
+      dockInputRef.current.style.height = 'auto';
+      dockInputRef.current.style.height = `${Math.min(dockInputRef.current.scrollHeight, 120)}px`;
     }
   };
 
-  const handlePreSessionStart = (session: RecallSession) => {
-    setActiveRecallTopic(selectedTopicForPreSession);
-    setActiveRecallSession(session);
-    setSelectedTopicForPreSession(null);
-  };
-
-  const handleRecallComplete = async () => {
-    setActiveRecallSession(null);
-    setActiveRecallTopic(null);
-    if (user?.uid) {
-      recordRecallCompletion(user.uid);
+  const handleDockLaunch = () => {
+    const target = dockInput.trim();
+    if (!target) {
+      if (dockInputRef.current) {
+        dockInputRef.current.focus();
+      }
+      setToastMessage('Enter a concept name, question, or scenario to start active recall.');
+      setTimeout(() => setToastMessage(null), 3500);
+      return;
     }
-    showToast('Recall session recorded! Retention scores calibrated.');
-    await refreshProfile();
-    await fetchTopics();
+    navigate(`/recall?topic=${encodeURIComponent(target)}`);
   };
 
   // Filter and sort concept cards strictly based on authenticated user's database topics
@@ -285,12 +277,6 @@ export const RetentionHubPage: React.FC = () => {
 
     return list;
   }, [topics, searchQuery, sortOption]);
-
-  const handleDockLaunch = () => {
-    const target = dockInput.trim() || 'Self-Attention Mechanism';
-    handleStartRecallSession(target, 49.0);
-    setDockInput('');
-  };
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-[#111C2D] font-sans flex flex-col selection:bg-emerald-500/20 selection:text-emerald-900 antialiased pb-28">
@@ -476,16 +462,7 @@ export const RetentionHubPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Pre-Session Diagnostic Card when selected */}
-      {selectedTopicForPreSession && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 w-full animate-in fade-in slide-in-from-top-3 duration-200">
-          <TopicPreSessionCard
-            topic={selectedTopicForPreSession}
-            onStartSession={handlePreSessionStart}
-            onCancel={() => setSelectedTopicForPreSession(null)}
-          />
-        </section>
-      )}
+
 
       {/* 4. Search & Filter Toolbar */}
       <section id="filter-toolbar" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 w-full">
@@ -728,7 +705,7 @@ export const RetentionHubPage: React.FC = () => {
                     <span className="text-[11px] font-mono text-[#64748B]">{card.durationEst}</span>
                     <button
                       type="button"
-                      onClick={() => handleStartRecallSession(card.title, card.retentionScore)}
+                      onClick={() => handleStartRecallSession(card.title)}
                       className="py-1.5 px-3.5 rounded-lg bg-[#006948] hover:bg-[#005439] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer flex items-center gap-1"
                     >
                       <span>{card.actionLabel}</span>
@@ -798,7 +775,7 @@ export const RetentionHubPage: React.FC = () => {
                           {100 - c.aiExposureRaw}% ({c.aiExposureRaw}% AI Gen)
                         </td>
                         <td className={`py-3.5 px-4 font-mono font-semibold ${isCrit ? 'text-rose-700' : isMod ? 'text-amber-800' : 'text-emerald-800'}`}>
-                          {c.retentionScore.toFixed(1)}% ({c.halfLifeEst})
+                          {c.retentionScore.toFixed(1)}%
                         </td>
                         <td className="py-3.5 px-4">
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-[10px] font-semibold ${
@@ -817,7 +794,7 @@ export const RetentionHubPage: React.FC = () => {
                         <td className="py-3.5 px-4 text-right">
                           <button
                             type="button"
-                            onClick={() => handleStartRecallSession(c.title, c.retentionScore)}
+                            onClick={() => handleStartRecallSession(c.title)}
                             className="text-[#006948] hover:text-[#005439] font-mono font-bold text-xs hover:underline cursor-pointer"
                           >
                             Recall &rarr;
@@ -841,65 +818,77 @@ export const RetentionHubPage: React.FC = () => {
       </section>
 
       {/* 7. Floating Bottom Recall Dock */}
-      <aside id="floating-recall-dock" className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-[95%] max-w-4xl z-50">
-        <div className="bg-white/95 backdrop-blur-md rounded-xl border border-[#E5E0D8] p-3 sm:p-4 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+      <aside id="floating-recall-dock" className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-[95%] max-w-5xl z-50">
+        <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-[#E5E0D8] p-2.5 sm:p-3 shadow-2xl transition-all duration-200 space-y-2">
           
-          {/* Dock Input & Prompt */}
-          <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
-            <div className="w-8 h-8 rounded-lg bg-[#ECFDF5] border border-emerald-200 text-[#006948] flex items-center justify-center shrink-0">
-              <Brain className="w-4 h-4" />
+          {/* Main Full-Width Input & Action Row */}
+          <div className="flex items-end gap-2 min-w-0">
+            {/* Leading Brain Icon */}
+            <div className="w-10 h-10 rounded-xl bg-[#ECFDF5] border border-emerald-200 text-[#006948] flex items-center justify-center shrink-0 mb-0.5" title="Adaptive Peer Recall with Automatic Depth Calibration">
+              <Brain className="w-5 h-5" />
             </div>
-            <div className="flex-1">
-              <div className="font-sans font-semibold text-xs text-[#111C2D]">Want to refresh something specific?</div>
-              <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                <span className="text-[10px] font-mono text-slate-400">Quick jump:</span>
-                <button
-                  type="button"
-                  onClick={() => handleStartRecallSession('CUDA Streams', 55.0)}
-                  className="px-2 py-0.5 rounded bg-[#FAF8F5] border border-[#E5E0D8] text-[10px] font-mono text-[#111C2D] hover:border-[#006948] hover:text-[#006948] transition-all cursor-pointer"
-                >
-                  [ CUDA Streams ]
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStartRecallSession('Raft Consensus', 42.0)}
-                  className="px-2 py-0.5 rounded bg-[#FAF8F5] border border-[#E5E0D8] text-[10px] font-mono text-[#111C2D] hover:border-[#006948] hover:text-[#006948] transition-all cursor-pointer"
-                >
-                  [ Raft Consensus ]
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStartRecallSession('eBPF Tracing', 58.0)}
-                  className="px-2 py-0.5 rounded bg-[#FAF8F5] border border-[#E5E0D8] text-[10px] font-mono text-[#111C2D] hover:border-[#006948] hover:text-[#006948] transition-all cursor-pointer"
-                >
-                  [ eBPF Tracing ]
-                </button>
-              </div>
-            </div>
-          </div>
 
-          {/* Dock CTA */}
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-            <input
-              id="custom-recall-input"
-              type="text"
-              value={dockInput}
-              onChange={(e) => setDockInput(e.target.value)}
-              placeholder="Concept name..."
-              className="hidden sm:block w-36 px-2.5 py-1.5 rounded-lg border border-[#E5E0D8] text-xs bg-[#FAF8F5] font-mono text-[#111C2D] focus:outline-none focus:border-[#006948]"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleDockLaunch();
-              }}
-            />
+            {/* Expansive Textarea */}
+            <div className="relative flex-1 min-w-0">
+              <textarea
+                ref={dockInputRef}
+                id="custom-recall-input"
+                rows={1}
+                value={dockInput}
+                onChange={handleDockInputChange}
+                placeholder="Enter any concept, question, or scenario (e.g., Postgres GIN index trade-offs under high write throughput)..."
+                className="w-full px-3.5 py-2.5 pr-8 rounded-xl border border-[#E5E0D8] text-xs sm:text-sm bg-[#FAF8F5] font-mono text-[#111C2D] placeholder:text-slate-400 focus:outline-none focus:border-[#006948] focus:bg-white resize-none min-h-[40px] max-h-40 leading-relaxed transition-all"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleDockLaunch();
+                  }
+                }}
+              />
+              {dockInput && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDockInput('');
+                    if (dockInputRef.current) {
+                      dockInputRef.current.style.height = 'auto';
+                    }
+                  }}
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer transition-colors"
+                  title="Clear input"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Launch CTA */}
             <button
               id="btn-dock-launch-recall"
               type="button"
               onClick={handleDockLaunch}
-              className="w-full sm:w-auto px-4 py-2 rounded-lg bg-[#006948] hover:bg-[#005439] text-white font-sans text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+              className="px-4 py-2.5 rounded-xl bg-[#006948] hover:bg-[#005439] text-white font-sans text-xs sm:text-sm font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0 whitespace-nowrap h-[40px]"
             >
               <span>Launch Recall</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4" />
             </button>
+          </div>
+
+          {/* Micro Helper Bar */}
+          <div className="flex items-center justify-between px-1 text-[11px] font-mono text-[#64748B]">
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="font-semibold text-slate-700">Adaptive Peer Recall</span>
+              <span className="text-slate-300">•</span>
+              <span className="text-slate-500 hidden md:inline">Automatic depth calibration via AI reliance & decay priority</span>
+            </div>
+            <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-slate-400">
+              <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-600 font-sans">Enter</kbd>
+              <span>to launch</span>
+              <span className="text-slate-300">•</span>
+              <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-600 font-sans">Shift+Enter</kbd>
+              <span>new line</span>
+            </div>
           </div>
 
         </div>
@@ -913,27 +902,15 @@ export const RetentionHubPage: React.FC = () => {
         </div>
       )}
 
-      {/* Socratic Drill Modals */}
+      {/* Direct Topic Selection Drill Modal */}
       {showTopicSelectModal && (
         <TopicSelectionModal
           topics={topics}
           onSelectTopic={(topic) => {
             setShowTopicSelectModal(false);
-            setSelectedTopicForPreSession(topic);
+            handleStartRecallSession(topic.canonicalName);
           }}
           onClose={() => setShowTopicSelectModal(false)}
-        />
-      )}
-
-      {activeRecallSession && activeRecallTopic && (
-        <RecallSessionModal
-          session={activeRecallSession}
-          topic={activeRecallTopic}
-          onComplete={handleRecallComplete}
-          onClose={() => {
-            setActiveRecallSession(null);
-            setActiveRecallTopic(null);
-          }}
         />
       )}
 

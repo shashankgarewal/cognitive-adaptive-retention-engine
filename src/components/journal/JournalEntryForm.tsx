@@ -77,6 +77,7 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ onSuccess, o
   const [modeType, setModeType] = useState('Web App');
   const [customMode, setCustomMode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = React.useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [extractedResult, setExtractedResult] = useState<{
     entry: JournalEntry;
@@ -86,6 +87,8 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ onSuccess, o
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting || isSubmittingRef.current) return;
+
     if (!title.trim()) {
       setError('Please provide a title for this engineering journal.');
       return;
@@ -96,6 +99,7 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ onSuccess, o
     }
 
     setError(null);
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
 
     try {
@@ -125,6 +129,7 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ onSuccess, o
       setError(err.message || 'Failed to ingest journal entry.');
     } finally {
       setIsSubmitting(false);
+      isSubmittingRef.current = false;
     }
   };
 

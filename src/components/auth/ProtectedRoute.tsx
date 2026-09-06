@@ -14,6 +14,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   React.useEffect(() => {
     if (user && location.pathname && location.pathname !== '/') {
       try {
+        localStorage.setItem('care_last_internal_route', location.pathname);
         sessionStorage.setItem('care_last_active_route', location.pathname);
       } catch {
         // ignore

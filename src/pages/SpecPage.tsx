@@ -5,6 +5,13 @@ import { ArchitectureSpecPage } from '../components/spec/ArchitectureSpecPage';
 export const SpecPage: React.FC = () => {
   const navigate = useNavigate();
 
+  const handleViewLanding = () => {
+    try {
+      sessionStorage.setItem('care_user_explicitly_chose_landing', 'true');
+    } catch {}
+    navigate('/');
+  };
+
   return (
     <ArchitectureSpecPage
       onSelectNav={(navId) => {
@@ -13,9 +20,9 @@ export const SpecPage: React.FC = () => {
         else if (navId === 'hub') navigate('/hub');
         else if (navId === 'analytics') navigate('/analytics');
         else if (navId === 'spec') navigate('/spec');
-        else if (navId === 'landing') navigate('/');
+        else if (navId === 'landing') handleViewLanding();
       }}
-      onViewLanding={() => navigate('/')}
+      onViewLanding={handleViewLanding}
     />
   );
 };

@@ -23,6 +23,7 @@ import { RetentionHubPage } from './pages/RetentionHubPage';
 import { AnalyticsDecayPage } from './pages/AnalyticsDecayPage';
 import { SpecPage } from './pages/SpecPage';
 import { JournalWriterPage } from './pages/JournalWriterPage';
+import { ActiveRecallPage } from './pages/ActiveRecallPage';
 
 export default function App() {
   return (
@@ -46,6 +47,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <RetentionHubPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recall"
+            element={
+              <ProtectedRoute>
+                <ActiveRecallPage />
               </ProtectedRoute>
             }
           />

@@ -27,6 +27,7 @@ import {
 
 interface AppNavbarProps {
   activeNav?: 'feed' | 'hub' | 'analytics' | 'spec' | 'editor' | string;
+  currentTab?: string;
   onSelectNav?: (navId: string) => void;
   onLogClick?: () => void;
   onOpenAuth?: () => void;
@@ -39,6 +40,7 @@ interface AppNavbarProps {
 
 export const AppNavbar: React.FC<AppNavbarProps> = ({
   activeNav: propActiveNav,
+  currentTab,
   onSelectNav,
   onLogClick,
   onOpenAuth,
@@ -57,10 +59,10 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({
 
   // Derive active nav item from route if not provided
   const currentPath = location.pathname;
-  let activeNav = propActiveNav;
+  let activeNav = propActiveNav || currentTab;
   if (!activeNav) {
     if (currentPath.startsWith('/feed')) activeNav = 'feed';
-    else if (currentPath.startsWith('/hub')) activeNav = 'hub';
+    else if (currentPath.startsWith('/hub') || currentPath.startsWith('/recall')) activeNav = 'hub';
     else if (currentPath.startsWith('/analytics')) activeNav = 'analytics';
     else if (currentPath.startsWith('/spec')) activeNav = 'spec';
     else if (currentPath.startsWith('/editor') || currentPath.startsWith('/journal/editor')) activeNav = 'editor';
@@ -142,27 +144,25 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({
             <span>v0.1</span>
           </div>
 
-          {/* Genuine Streak Telemetry Pills */}
+          {/* Sleek Streak Telemetry Chips */}
           {user && (
-            <div className="hidden lg:flex items-center gap-2 pl-3 border-l border-slate-200">
+            <div className="hidden lg:flex items-center gap-1.5 pl-3 border-l border-slate-200 shrink-0">
               <div
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50/80 border border-amber-200 text-amber-900 text-xs font-mono font-medium shadow-2xs"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50/90 border border-amber-200/80 text-amber-900 text-xs font-sans font-medium whitespace-nowrap shadow-2xs hover:bg-amber-100/80 transition-colors cursor-default"
                 title={`${logStreak} consecutive day${logStreak === 1 ? '' : 's'} logging work journals`}
               >
-                <span className="text-amber-600">🔥</span>
-                <span>
-                  Log Streak: <strong className="font-semibold text-amber-950">{logStreak}d</strong>
-                </span>
+                <span className="text-xs leading-none">🔥</span>
+                <span className="text-[11px] font-mono font-bold text-amber-950">{logStreak}d</span>
+                <span className="text-[11px] text-amber-800">log</span>
               </div>
 
               <div
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50/80 border border-emerald-200 text-emerald-900 text-xs font-mono font-medium shadow-2xs"
-                title={`${recallStreak} consecutive day${recallStreak === 1 ? '' : 's'} completing active recall`}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50/90 border border-emerald-200/80 text-emerald-900 text-xs font-sans font-medium whitespace-nowrap shadow-2xs hover:bg-emerald-100/80 transition-colors cursor-default"
+                title={`${recallStreak} consecutive day${recallStreak === 1 ? '' : 's'} completing active recall drills`}
               >
-                <span className="text-emerald-700">🧠</span>
-                <span>
-                  Recall Streak: <strong className="font-semibold text-emerald-950">{recallStreak}d</strong>
-                </span>
+                <span className="text-xs leading-none">🧠</span>
+                <span className="text-[11px] font-mono font-bold text-emerald-950">{recallStreak}d</span>
+                <span className="text-[11px] text-emerald-800">recall</span>
               </div>
             </div>
           )}
@@ -191,15 +191,15 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
-          {/* Primary Action Button: + Log Work Journal */}
+          {/* Primary Action Button: Log Work Journal */}
           <button
             id="btn-navbar-log-work-journal"
             type="button"
             onClick={handleLogJournal}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#006948] hover:bg-[#005439] text-white text-xs sm:text-sm font-medium transition-colors shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#006948] hover:bg-[#005439] active:scale-[0.98] text-white text-xs sm:text-sm font-medium transition-all shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4 text-white" />
-            <span className="whitespace-nowrap font-medium">+ Log Work Journal</span>
+            <span className="whitespace-nowrap font-medium">Log Work Journal</span>
           </button>
 
           {/* User Profile Menu or Sign In */}
@@ -258,6 +258,11 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({
                       type="button"
                       onClick={() => {
                         setIsProfileOpen(false);
+                        try {
+                          sessionStorage.setItem('care_user_explicitly_chose_landing', 'true');
+                        } catch {
+                          // ignore
+                        }
                         if (onViewLanding) onViewLanding();
                         else navigate('/');
                       }}

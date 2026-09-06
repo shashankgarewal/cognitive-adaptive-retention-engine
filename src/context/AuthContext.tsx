@@ -136,9 +136,37 @@ function parseAuthError(err: any): AuthErrorDetails {
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const cached = localStorage.getItem('care_user_session');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.uid) {
+          return {
+            uid: parsed.uid,
+            email: parsed.email || '',
+            displayName: parsed.displayName || '',
+            emailVerified: true,
+            isAnonymous: false,
+            metadata: {},
+            providerData: [],
+            refreshToken: '',
+            tenantId: null,
+            delete: async () => {},
+            getIdToken: async () => '',
+            getIdTokenResult: async () => ({} as any),
+            reload: async () => {},
+            toJSON: () => ({}),
+          } as unknown as User;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  });
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(() => !localStorage.getItem('care_user_session'));
   const [error, setError] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<AuthErrorDetails | null>(null);
 
@@ -465,7 +493,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Clean slate sanitation
       try {
         localStorage.removeItem('care_user_session');
+        localStorage.removeItem('care_last_internal_route');
         sessionStorage.removeItem('care_last_active_route');
+        sessionStorage.removeItem('care_user_explicitly_chose_landing');
       } catch {
         // ignore
       }

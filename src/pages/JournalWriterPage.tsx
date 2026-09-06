@@ -41,11 +41,37 @@ export const JournalWriterPage: React.FC = () => {
   const [aiLevel, setAiLevel] = useState<AiAssistanceLevel>('prompt_driven');
   const [aiTool, setAiTool] = useState('Cursor / Claude 3.7 Sonnet');
   const [isSaving, setIsSaving] = useState(false);
+  const isSavingRef = React.useRef(false);
+  const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
+  const savedEntryIdRef = React.useRef<string | null>(null);
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
   const [persistAiThread, setPersistAiThread] = useState(true);
   const [isSynthesizingTitle, setIsSynthesizingTitle] = useState(false);
   const [isPolishing, setIsPolishing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+
+  // Real-time synchronization of journal entries to track today's count
+  useEffect(() => {
+    if (!user) {
+      setEntries([]);
+      return;
+    }
+    const unsubscribe = api.subscribeJournalEntries((fetchedEntries) => {
+      setEntries(fetchedEntries || []);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  // Compute today's entries count
+  const todayEntriesCount = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    return entries.filter((e) => {
+      if (!e.createdAt) return false;
+      const d = new Date(e.createdAt);
+      return d.toDateString() === todayStr;
+    }).length;
+  }, [entries]);
 
   // Global keyboard shortcut: Cmd+/ or Ctrl+/ to toggle Co-Thinking drawer
   useEffect(() => {
@@ -158,6 +184,10 @@ export const JournalWriterPage: React.FC = () => {
   };
 
   const handleApplyTemplate = (val: string) => {
+    // Reset saved entry reference on new template / clear
+    setSavedEntryId(null);
+    savedEntryIdRef.current = null;
+
     if (val === 'gqa') {
       setTitle('Refactoring Multi-Head Attention to Grouped-Query Attention (GQA)');
       setBody(`Implemented Grouped-Query Attention (GQA-8) for our dense 7B transformer serving pipeline. 
@@ -201,11 +231,18 @@ Implementation Details:
   };
 
   const handleSave = async (openAiDrawerPostSave = false) => {
+    // 1. Strict synchronous concurrency guard to stop multiple rapid clicks
+    if (isSaving || isSavingRef.current) {
+      console.log('[SAVE GUARD] Ingestion already in progress, suppressing duplicate click');
+      return;
+    }
+
     if (!body.trim()) {
       showToast('Please enter some notes before saving.');
       return;
     }
 
+    isSavingRef.current = true;
     setIsSaving(true);
     const finalTitle =
       title.trim() || 'Journal Entry: ' + body.slice(0, 32).replace(/\n/g, ' ') + '...';
@@ -223,12 +260,24 @@ Implementation Details:
         payload.aiToolUsed = aiTool.trim();
       }
 
-      await api.createJournalEntry(payload);
-      if (user?.uid) {
-        recordJournalCompletion(user.uid);
+      if (savedEntryIdRef.current) {
+        // 2. User clicked save again on the same draft: update existing record instead of creating duplicates!
+        await api.updateJournalEntry(savedEntryIdRef.current, payload);
+        setTitle(finalTitle);
+        showToast('✓ Updated journal entry in CARE retention database');
+      } else {
+        // First-time save: create record and store ID
+        const res = await api.createJournalEntry(payload);
+        if (res?.entry?.entryId) {
+          setSavedEntryId(res.entry.entryId);
+          savedEntryIdRef.current = res.entry.entryId;
+        }
+        if (user?.uid) {
+          recordJournalCompletion(user.uid);
+        }
+        setTitle(finalTitle);
+        showToast('✓ Journal Entry committed to CARE retention database');
       }
-      setTitle(finalTitle);
-      showToast('✓ Journal Entry committed to CARE retention database');
 
       if (openAiDrawerPostSave) {
         setIsAiDrawerOpen(true);
@@ -245,6 +294,7 @@ Implementation Details:
       }
     } finally {
       setIsSaving(false);
+      isSavingRef.current = false;
     }
   };
 
@@ -263,7 +313,7 @@ Implementation Details:
       )}
 
       {/* 1. Global Navigation Header */}
-      <AppNavbar activeNav="editor" />
+      <AppNavbar activeNav="editor" entries={entries} />
 
       {/* 2. Telemetry Control Bar */}
       <section className="bg-white border-b border-[#E5E0D8] shadow-2xs">
@@ -275,6 +325,16 @@ Implementation Details:
                 <Laptop className="w-3.5 h-3.5 text-[#006948]" />
                 <span className="font-semibold text-[#111C2D]">Logged via:</span>
                 <span className="font-medium text-[#006948]">Web App</span>
+              </div>
+
+              {/* Today's Entries Count Pill */}
+              <div
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#ECFDF5] border border-emerald-200 text-xs font-mono text-[#006948] font-bold shadow-2xs"
+                title={`${todayEntriesCount} engineering journal${todayEntriesCount === 1 ? '' : 's'} recorded today`}
+              >
+                <span>📅 Today:</span>
+                <span className="text-[#006948] font-extrabold">{todayEntriesCount}</span>
+                <span className="text-emerald-700 font-normal">logged</span>
               </div>
 
               <span className="text-slate-300 hidden sm:inline">|</span>
@@ -392,6 +452,8 @@ Implementation Details:
               wordsCount={wordsCount}
               charsCount={charsCount}
               readTimeMin={readTimeMin}
+              todayEntriesCount={todayEntriesCount}
+              totalEntriesCount={entries.length}
             />
           </div>
 
@@ -419,7 +481,7 @@ Implementation Details:
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#006948] hover:bg-[#005439] text-white font-sans font-semibold text-sm shadow-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-          <span>{isSaving ? 'Saving...' : '✓ Save Entry'}</span>
+          <span>{isSaving ? 'Saving...' : `✓ Save Entry (${todayEntriesCount} logged today)`}</span>
         </button>
 
         <button

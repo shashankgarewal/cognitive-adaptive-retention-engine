@@ -6,9 +6,10 @@
  * 3. Cognitive Stability: Active decay detection & baseline status
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { BookOpen, Network, ShieldCheck, ArrowUpRight } from 'lucide-react';
 import { JournalEntry, TopicRetentionState } from '../../types';
+import { calculateTopicPriority } from '../../lib/firestoreService';
 
 interface ZeroStateMetricCardsProps {
   entriesCount?: number;
@@ -24,25 +25,54 @@ export const ZeroStateMetricCards: React.FC<ZeroStateMetricCardsProps> = ({
   onCardClick,
 }) => {
   const journalCount = propEntriesCount !== undefined ? propEntriesCount : entries.length;
+
+  // Calculate unique topics from topics array AND entries
   const topicsCount = topics.length;
 
-  const highAiCount = entries.filter((e) => {
-    const reliance =
-      e.aiReliancePercentage ??
-      (e.aiAssistanceLevel === 'agentic'
-        ? 85
-        : e.aiAssistanceLevel === 'spec_driven'
-        ? 75
-        : e.aiAssistanceLevel === 'prompt_driven'
-        ? 45
-        : 15);
-    return reliance >= 60;
-  }).length;
+  // Calculate today's entries count
+  const todayEntriesCount = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    return entries.filter((e) => {
+      if (!e.createdAt) return false;
+      const d = new Date(e.createdAt);
+      return d.toDateString() === todayStr;
+    }).length;
+  }, [entries]);
 
-  const atRiskTopics = topics.filter((t) => {
-    const score = t.retentionScore ?? t.stabilityRatio ?? 1;
-    return score < 0.65;
-  }).length;
+  // High AI reliance count
+  const highAiCount = useMemo(() => {
+    return entries.filter((e) => {
+      const reliance =
+        e.aiReliancePercentage ??
+        (e.aiAssistanceLevel === 'agentic'
+          ? 85
+          : e.aiAssistanceLevel === 'spec_driven'
+          ? 78
+          : e.aiAssistanceLevel === 'prompt_driven'
+          ? 45
+          : 12);
+      return (
+        reliance >= 45 ||
+        e.aiAssistanceLevel === 'agentic' ||
+        e.aiAssistanceLevel === 'spec_driven'
+      );
+    }).length;
+  }, [entries]);
+
+  // Accurately determine At-Risk Topics using CARE priority engine formulas strictly from authentic topics:
+  const atRiskTopicsCount = useMemo(() => {
+    if (!topics || topics.length === 0) {
+      return 0;
+    }
+    return topics.filter((t) => {
+      const calc = calculateTopicPriority(t);
+      const priority = t.currentPriorityScore ?? calc.priorityScore;
+      const aiWeight = t.effectiveAiAssistanceWeight ?? calc.A_signal ?? 0.5;
+      const recallScore = t.lastRecallScore ?? 2.5;
+      const isNeverRecalled = !t.lastRecallAt;
+      return priority >= 35 || aiWeight >= 0.45 || recallScore < 3.5 || (isNeverRecalled && aiWeight >= 0.4);
+    }).length;
+  }, [topics]);
 
   const cards = [
     {
@@ -52,6 +82,8 @@ export const ZeroStateMetricCards: React.FC<ZeroStateMetricCardsProps> = ({
       status:
         journalCount === 0
           ? 'Ready for initial engineering log'
+          : todayEntriesCount > 0
+          ? `${todayEntriesCount} today · ${highAiCount} with AI tracking`
           : `${highAiCount} logged with AI assistance tracking`,
       icon: BookOpen,
       iconBg: 'bg-[#F0F3FF]',
@@ -82,17 +114,17 @@ export const ZeroStateMetricCards: React.FC<ZeroStateMetricCardsProps> = ({
     {
       id: 'cognitive-stability',
       title: 'Cognitive Stability',
-      value: `${atRiskTopics} Topic${atRiskTopics === 1 ? '' : 's'} At Risk`,
+      value: `${atRiskTopicsCount} Topic${atRiskTopicsCount === 1 ? '' : 's'} At Risk`,
       status:
-        atRiskTopics === 0
+        atRiskTopicsCount === 0
           ? 'No decay detected · Baseline pristine'
-          : `${atRiskTopics} require Socratic recall reinforcement`,
+          : `${atRiskTopicsCount} topic${atRiskTopicsCount > 1 ? 's' : ''} require Socratic recall reinforcement`,
       icon: ShieldCheck,
-      iconBg: atRiskTopics > 0 ? 'bg-amber-50' : 'bg-[#ECFDF5]',
-      iconColor: atRiskTopics > 0 ? 'text-[#8D4B00]' : 'text-[#006948]',
-      badge: atRiskTopics > 0 ? 'DECAY DETECTED' : 'STABLE',
+      iconBg: atRiskTopicsCount > 0 ? 'bg-[#FFF8ED]' : 'bg-[#ECFDF5]',
+      iconColor: atRiskTopicsCount > 0 ? 'text-[#8D4B00]' : 'text-[#006948]',
+      badge: atRiskTopicsCount > 0 ? 'DECAY DETECTED' : 'STABLE',
       badgeColor:
-        atRiskTopics > 0
+        atRiskTopicsCount > 0
           ? 'bg-[#FFF8ED] text-[#8D4B00] border-amber-200'
           : 'bg-emerald-50 text-[#006948] border-emerald-200',
     },

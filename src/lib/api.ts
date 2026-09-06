@@ -157,6 +157,46 @@ export const api = {
   },
 
   /**
+   * Updates an existing journal entry in Firestore.
+   */
+  async updateJournalEntry(
+    entryId: string,
+    payload: {
+      title: string;
+      rawContent: string;
+      aiAssistanceLevel: string;
+      aiToolUsed?: string;
+      modeType?: string;
+      stabilityRatio?: number;
+      tags?: string[];
+    }
+  ) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      throw new Error('Authentication required: please sign in to update a work journal.');
+    }
+
+    const aiLevel = (payload.aiAssistanceLevel as AiAssistanceLevel) || 'prompt_driven';
+
+    const result = await firestoreService.updateJournalEntry(currentUser.uid, entryId, {
+      title: payload.title,
+      rawContent: payload.rawContent,
+      aiAssistanceLevel: aiLevel,
+      aiToolUsed: payload.aiToolUsed,
+      modeType: payload.modeType,
+      stabilityRatio: payload.stabilityRatio,
+      tags: payload.tags,
+    });
+
+    return {
+      status: 'ok',
+      entry: result.entry,
+      summary: payload.rawContent.slice(0, 180) + '...',
+      extractedConcepts: result.extractedConcepts,
+    };
+  },
+
+  /**
    * Subscribes to real-time user-specific journal entries from Cloud Firestore.
    */
   subscribeJournalEntries(
@@ -322,7 +362,8 @@ export const api = {
       currentUser.uid,
       payload.topicId,
       payload.targetDepth,
-      payload.customFocusArea
+      payload.customFocusArea,
+      payload.topicName
     );
 
     return {

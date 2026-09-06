@@ -29,6 +29,27 @@ export const WorkJournalFeedPage: React.FC = () => {
       return;
     }
 
+    // 1. Instantly load from browser cache by user ID if available
+    try {
+      const cachedEntries = localStorage.getItem(`care_entries_${user.uid}`);
+      if (cachedEntries) {
+        const parsed = JSON.parse(cachedEntries);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setEntries(parsed);
+          setIsLoading(false); // instant render!
+        }
+      }
+      const cachedTopics = localStorage.getItem(`care_topics_${user.uid}`);
+      if (cachedTopics) {
+        const parsedT = JSON.parse(cachedTopics);
+        if (Array.isArray(parsedT) && parsedT.length > 0) {
+          setTopics(parsedT);
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     setIsLoading(true);
 
     // 2. Timeout Safety Net:
@@ -41,7 +62,11 @@ export const WorkJournalFeedPage: React.FC = () => {
 
     // Fetch topics asynchronously
     api.getTopics().then((topicsRes) => {
-      setTopics(topicsRes.topics || []);
+      const freshTopics = topicsRes.topics || [];
+      setTopics(freshTopics);
+      try {
+        localStorage.setItem(`care_topics_${user.uid}`, JSON.stringify(freshTopics));
+      } catch {}
     }).catch((err) => {
       console.warn('[WorkJournalFeedPage] Topics fetch warning:', err);
     });
@@ -52,6 +77,9 @@ export const WorkJournalFeedPage: React.FC = () => {
       (fetchedEntries, empty) => {
         clearTimeout(safetyTimeout);
         setEntries(fetchedEntries);
+        try {
+          localStorage.setItem(`care_entries_${user.uid}`, JSON.stringify(fetchedEntries));
+        } catch {}
         // Ensure setIsLoading(false) is called immediately when snapshot.empty is true or data received
         setIsLoading(false);
       },
@@ -85,7 +113,19 @@ export const WorkJournalFeedPage: React.FC = () => {
     else if (navId === 'hub') navigate('/hub');
     else if (navId === 'analytics') navigate('/analytics');
     else if (navId === 'spec') navigate('/spec');
-    else if (navId === 'landing') navigate('/');
+    else if (navId === 'landing') {
+      try {
+        sessionStorage.setItem('care_user_explicitly_chose_landing', 'true');
+      } catch {}
+      navigate('/');
+    }
+  };
+
+  const handleViewLanding = () => {
+    try {
+      sessionStorage.setItem('care_user_explicitly_chose_landing', 'true');
+    } catch {}
+    navigate('/');
   };
 
   if (isLoading && entries.length === 0) {
@@ -104,7 +144,7 @@ export const WorkJournalFeedPage: React.FC = () => {
     return (
       <ZeroStateDashboard
         onLogJournalSuccess={handleJournalSuccess}
-        onViewLanding={() => navigate('/')}
+        onViewLanding={handleViewLanding}
         entriesCount={entries.length}
         onToggleToPopulated={entries.length > 0 ? () => setForceZeroState(false) : undefined}
         onOpenSpec={() => navigate('/spec')}
@@ -120,7 +160,7 @@ export const WorkJournalFeedPage: React.FC = () => {
       topics={topics}
       onOpenSpec={() => navigate('/spec')}
       onSelectNav={handleNavSelect}
-      onViewLanding={() => navigate('/')}
+      onViewLanding={handleViewLanding}
       onLogSuccess={handleJournalSuccess}
       onToggleToZeroState={() => setForceZeroState(true)}
     />
