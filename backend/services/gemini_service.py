@@ -33,15 +33,15 @@ class GeminiService:
         self._client: Optional[genai.Client] = None
 
     def _get_client(self) -> Optional[genai.Client]:
-        """Lazy client initialization supporting Vertex AI mode and Google AI Studio API key."""
+        """Lazy client initialization prioritizing Google Cloud Vertex AI with Application Default Credentials."""
         if self._client is not None:
             return self._client
 
-        # 1. Prefer Vertex AI if configured
+        # 1. Primary: Vertex AI mode (using GCP project & location with Google Cloud ADC)
         if settings.USE_VERTEX_AI:
             try:
                 logger.info(
-                    f"Initializing google-genai Client in Vertex AI mode (project={settings.GCP_PROJECT_ID}, location={settings.GCP_LOCATION})"
+                    f"Initializing google-genai Client via Vertex AI (project={settings.GCP_PROJECT_ID}, location={settings.GCP_LOCATION})"
                 )
                 self._client = genai.Client(
                     vertexai=True,
@@ -50,9 +50,9 @@ class GeminiService:
                 )
                 return self._client
             except Exception as e:
-                logger.warning(f"Vertex AI Client initialization error: {e}; attempting fallback to API key.")
+                logger.warning(f"Vertex AI Client initialization warning: {e}; checking API key fallback if provided.")
 
-        # 2. Fallback to API Key mode
+        # 2. Optional Secondary Fallback: API Key mode if Vertex AI is disabled or unavailable
         api_key = get_gemini_api_key()
         if api_key:
             try:
