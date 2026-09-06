@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from backend.routers.auth import router as auth_router
 from backend.routers.journal import router as journal_router
+from backend.routers.recall import router as recall_router
 from backend.config import settings
 
 app = FastAPI(
@@ -34,6 +35,7 @@ app.add_middleware(
 # -----------------------------------------------------------------------------
 app.include_router(auth_router)
 app.include_router(journal_router)
+app.include_router(recall_router)
 
 
 @app.get("/api/health")

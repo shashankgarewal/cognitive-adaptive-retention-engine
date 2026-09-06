@@ -172,7 +172,63 @@ class RecallSession(FirestoreBaseModel):
     topicId: str
     topicName: str
     status: Literal["in_progress", "completed", "abandoned"] = "in_progress"
+    targetDepth: Literal["foundational", "intermediate", "advanced"] = "intermediate"
+    customFocusArea: Optional[str] = None
+    initialBreakdown: Optional[Dict[str, Any]] = None
     turns: List[ChatTurn] = Field(default_factory=list)
     evaluation: Optional[RecallEvaluation] = None
     startedAt: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
     completedAt: Optional[str] = None
+
+
+# -----------------------------------------------------------------------------
+# Slice 3 Recall Queue & Query Schemas
+# -----------------------------------------------------------------------------
+
+class RecallQueueItem(FirestoreBaseModel):
+    topicId: str
+    canonicalName: str
+    category: str
+    priorityScore: float
+    T_decay: float
+    d_elapsed_days: float
+    A_signal: float
+    H_weakness: float
+    M_freq: float
+    rationaleBadge: str
+    lastLoggedAt: str
+    lastRecallAt: Optional[str] = None
+    journalOccurrences: int = 1
+    effectiveAiAssistanceWeight: float = 0.5
+    lastRecallScore: float = 2.5
+    explanationReason: Optional[str] = None
+
+
+class RecallQueueResponse(BaseModel):
+    status: str = "ok"
+    queue: List[RecallQueueItem]
+    total: int
+    generatedAt: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+
+
+class RecallTopicsQueryResponse(BaseModel):
+    status: str = "ok"
+    topics: List[TopicRetentionState]
+    total: int
+    page: int = 1
+    limit: int = 20
+    categories: List[str] = Field(default_factory=list)
+
+
+class RecallSessionInitRequest(BaseModel):
+    topicId: str
+    targetDepth: Optional[Literal["foundational", "intermediate", "advanced"]] = "intermediate"
+    customFocusArea: Optional[str] = None
+
+
+class RecallSessionInitResponse(BaseModel):
+    status: str = "ok"
+    session: RecallSession
+    topic: TopicRetentionState
+    breakdown: Dict[str, Any]
+

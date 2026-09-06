@@ -135,5 +135,64 @@ class RecallHeuristicEngine:
 
         return scaled_priority, explanation
 
+    def evaluate_breakdown(
+        self,
+        state: TopicRetentionState,
+        base_importance: float = 0.8,
+        now: Optional[datetime] = None,
+    ) -> dict:
+        """
+        Evaluates full mathematical decay components for Slice 3 queue and pre-session cards.
+        Computes T_decay, d_elapsed_days, A_signal, H_weakness, M_freq, priorityScore,
+        and human-readable rationale badge based on dominant decay drivers.
+        """
+        last_event = state.lastRecallAt or state.lastLoggedAt
+        T_t, elapsed_days = self.compute_time_factor(last_event, now)
+
+        A_t = self.compute_ai_assistance_factor(
+            state.recentAiAssistanceSignals,
+            state.effectiveAiAssistanceWeight,
+        )
+
+        has_history = len(state.recallHistory) > 0
+        H_t = self.compute_history_factor(state.lastRecallScore, has_history)
+
+        M_t = self.compute_multiplier(state.journalOccurrences, base_importance)
+
+        raw_priority = (self.w1 * T_t + self.w2 * A_t + self.w3 * H_t) * M_t
+        scaled_priority = round(min(100.0, max(0.0, raw_priority * 100.0)), 1)
+
+        # Categorize dominant decay driver into a concise human-readable badge
+        if A_t >= 0.75:
+            rationale_badge = "High AI Reliance"
+        elif elapsed_days >= 5.0 or T_t >= 0.40:
+            rationale_badge = "Time Decay Alert"
+        elif H_t >= 0.70:
+            rationale_badge = "Weak Retention Signal"
+        elif M_t >= 1.15:
+            rationale_badge = "High Frequency Focus"
+        elif scaled_priority >= 50.0:
+            rationale_badge = "High Priority Decay"
+        else:
+            rationale_badge = "Stable Baseline"
+
+        explanation = (
+            f"T(t)={T_t:.2f} ({elapsed_days:.1f}d) | "
+            f"A(t)={A_t:.2f} (AI signal) | "
+            f"H(t)={H_t:.2f} (recall gap) | "
+            f"M(t)={M_t:.2f}"
+        )
+
+        return {
+            "priorityScore": scaled_priority,
+            "T_decay": round(T_t, 3),
+            "d_elapsed_days": round(elapsed_days, 1),
+            "A_signal": round(A_t, 3),
+            "H_weakness": round(H_t, 3),
+            "M_freq": round(M_t, 3),
+            "rationaleBadge": rationale_badge,
+            "explanationReason": explanation,
+        }
+
 
 recall_heuristic_engine = RecallHeuristicEngine()

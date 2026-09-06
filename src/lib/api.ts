@@ -4,7 +4,16 @@
  */
 
 import { auth } from './firebase';
-import { UserProfile, JournalEntry, TopicRetentionState, RecallSession } from '../types';
+import {
+  UserProfile,
+  JournalEntry,
+  TopicRetentionState,
+  RecallSession,
+  RecallQueueResponse,
+  RecallTopicsQueryResponse,
+  RecallSessionInitPayload,
+  RecallSessionInitResponse,
+} from '../types';
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {
@@ -109,6 +118,65 @@ export const api = {
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({ detail: 'Failed to fetch topics' }));
       throw new Error(errorData.detail || 'Failed to fetch topics');
+    }
+
+    return res.json();
+  },
+
+  async getRecallQueue(limit = 20): Promise<RecallQueueResponse> {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`/api/recall/queue?limit=${limit}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ detail: 'Failed to evaluate recall queue' }));
+      throw new Error(errorData.detail || 'Failed to evaluate recall queue');
+    }
+
+    return res.json();
+  },
+
+  async getRecallTopics(params?: {
+    search?: string;
+    category?: string;
+    sortBy?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<RecallTopicsQueryResponse> {
+    const headers = await getAuthHeaders();
+    const query = new URLSearchParams();
+    if (params?.search) query.append('search', params.search);
+    if (params?.category) query.append('category', params.category);
+    if (params?.sortBy) query.append('sort_by', params.sortBy);
+    if (params?.page) query.append('page', String(params.page));
+    if (params?.limit) query.append('limit', String(params.limit));
+
+    const res = await fetch(`/api/recall/topics?${query.toString()}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ detail: 'Failed to search topics' }));
+      throw new Error(errorData.detail || 'Failed to search topics');
+    }
+
+    return res.json();
+  },
+
+  async initRecallSession(payload: RecallSessionInitPayload): Promise<RecallSessionInitResponse> {
+    const headers = await getAuthHeaders();
+    const res = await fetch('/api/recall/sessions/init', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ detail: 'Failed to initialize recall session' }));
+      throw new Error(errorData.detail || 'Failed to initialize recall session');
     }
 
     return res.json();

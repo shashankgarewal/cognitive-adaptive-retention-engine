@@ -25,10 +25,12 @@ import {
   ArrowRight,
   Lock,
 } from 'lucide-react';
-import { JournalEntry, TopicRetentionState, ExtractedConcept } from '../../types';
+import { JournalEntry, TopicRetentionState, ExtractedConcept, RecallSession } from '../../types';
 import { JournalEntryForm } from '../journal/JournalEntryForm';
 import { JournalFeed } from '../journal/JournalFeed';
 import { TopicRetentionList } from './TopicRetentionList';
+import { TopicSelectionModal } from '../recall/TopicSelectionModal';
+import { TopicPreSessionCard } from '../recall/TopicPreSessionCard';
 
 interface WorkspaceHomeProps {
   onOpenAuth: () => void;
@@ -41,6 +43,11 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
   const [topics, setTopics] = useState<TopicRetentionState[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [selectedConcept, setSelectedConcept] = useState<ExtractedConcept | null>(null);
+
+  // Slice 3: Recall Engine states
+  const [showTopicSelectModal, setShowTopicSelectModal] = useState(false);
+  const [selectedTopicForPreSession, setSelectedTopicForPreSession] = useState<TopicRetentionState | null>(null);
+  const [activeRecallSession, setActiveRecallSession] = useState<RecallSession | null>(null);
 
   // Security test token state
   const [tokenTestResult, setTokenTestResult] = useState<any | null>(null);
@@ -314,15 +321,22 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
                   <h2 className="text-base font-semibold text-stone-100">Retention Decay Queue</h2>
                   <span className="text-xs text-stone-500 font-mono">({topics.length})</span>
                 </div>
-                <span className="text-[11px] text-stone-400 font-mono">Priority(t) Desc</span>
+                <button
+                  id="btn-select-topic-modal-trigger"
+                  type="button"
+                  onClick={() => setShowTopicSelectModal(true)}
+                  className="text-xs text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Select Topic</span>
+                </button>
               </div>
 
               <TopicRetentionList
                 topics={topics}
                 isLoading={isLoadingData}
-                onInitiateRecall={(topic) => {
-                  alert(`Ready for Slice 4: Socratic Peer Interview for "${topic.canonicalName}" (Priority: ${topic.currentPriorityScore.toFixed(1)})`);
-                }}
+                onInitiateRecall={(topic) => setSelectedTopicForPreSession(topic)}
+                onOpenSelectModal={() => setShowTopicSelectModal(true)}
               />
 
               {/* Heuristic Formula Card */}
@@ -342,6 +356,28 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
             </div>
           </div>
         </>
+      )}
+
+      {/* Slice 3: Select Topic for Recall Modal */}
+      <TopicSelectionModal
+        isOpen={showTopicSelectModal}
+        onClose={() => setShowTopicSelectModal(false)}
+        onSelectTopic={(topic) => {
+          setShowTopicSelectModal(false);
+          setSelectedTopicForPreSession(topic);
+        }}
+      />
+
+      {/* Slice 3: Topic Pre-Session Card */}
+      {selectedTopicForPreSession && (
+        <TopicPreSessionCard
+          topic={selectedTopicForPreSession}
+          onClose={() => setSelectedTopicForPreSession(null)}
+          onSessionInitialized={(session) => {
+            setActiveRecallSession(session);
+            fetchData();
+          }}
+        />
       )}
 
       {/* Selected Concept Inspector Modal */}

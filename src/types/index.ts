@@ -94,10 +94,79 @@ export interface RecallSession {
   topicId: string;
   topicName: string;
   status: 'in_progress' | 'completed' | 'abandoned';
+  targetDepth?: 'foundational' | 'intermediate' | 'advanced';
+  customFocusArea?: string;
+  initialBreakdown?: {
+    priorityScore: number;
+    T_decay: number;
+    d_elapsed_days: number;
+    A_signal: number;
+    H_weakness: number;
+    M_freq: number;
+    rationaleBadge: string;
+    explanationReason?: string;
+  };
   turns: ChatTurn[];
   evaluation?: RecallEvaluation;
   startedAt: string;
   completedAt?: string;
+}
+
+export interface RecallQueueItem {
+  topicId: string;
+  canonicalName: string;
+  category: string;
+  priorityScore: number;
+  T_decay: number;
+  d_elapsed_days: number;
+  A_signal: number;
+  H_weakness: number;
+  M_freq: number;
+  rationaleBadge: string;
+  lastLoggedAt: string;
+  lastRecallAt?: string | null;
+  journalOccurrences: number;
+  effectiveAiAssistanceWeight: number;
+  lastRecallScore: number;
+  explanationReason?: string;
+}
+
+export interface RecallQueueResponse {
+  status: string;
+  queue: RecallQueueItem[];
+  total: number;
+  generatedAt: string;
+}
+
+export interface RecallTopicsQueryResponse {
+  status: string;
+  topics: TopicRetentionState[];
+  total: number;
+  page: number;
+  limit: number;
+  categories: string[];
+}
+
+export interface RecallSessionInitPayload {
+  topicId: string;
+  targetDepth?: 'foundational' | 'intermediate' | 'advanced';
+  customFocusArea?: string;
+}
+
+export interface RecallSessionInitResponse {
+  status: string;
+  session: RecallSession;
+  topic: TopicRetentionState;
+  breakdown: {
+    priorityScore: number;
+    T_decay: number;
+    d_elapsed_days: number;
+    A_signal: number;
+    H_weakness: number;
+    M_freq: number;
+    rationaleBadge: string;
+    explanationReason?: string;
+  };
 }
 
 export interface JournalIngestionResponse {
@@ -120,3 +189,4 @@ export interface TopicsListResponse {
   topics: TopicRetentionState[];
   total: number;
 }
+

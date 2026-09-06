@@ -60,6 +60,7 @@ function apiDevPlugin(): Plugin {
           req.url?.startsWith('/api/journal/') || 
           req.url === '/api/journal/entries' || 
           req.url?.startsWith('/api/topics') || 
+          req.url?.startsWith('/api/recall/') || 
           req.url === '/api/auth/me' || 
           req.url === '/api/auth/sync';
 
@@ -243,6 +244,171 @@ function apiDevPlugin(): Plugin {
               topics,
               total: topics.length,
             }));
+            return;
+          }
+
+          // Slice 3: Recall Engine dev middleware
+          if (req.url?.startsWith('/api/recall/queue') && req.method === 'GET') {
+            const topics = Object.values(userTopics) as any[];
+            const queue = topics.map(t => {
+              const lastEvent = t.lastRecallAt || t.lastLoggedAt;
+              const elapsedDays = Math.max(0.1, (Date.now() - new Date(lastEvent).getTime()) / (1000 * 86400));
+              const T_decay = +(1.0 - Math.exp(-0.1 * elapsedDays)).toFixed(3);
+              const A_signal = +(t.effectiveAiAssistanceWeight || 0.5).toFixed(3);
+              const H_weakness = +(t.recallHistory?.length > 0 ? (5.0 - t.lastRecallScore) / 4.0 : 0.50).toFixed(3);
+              const M_freq = +(1.0 + 0.05 * Math.min(Math.max(0, (t.journalOccurrences || 1) - 1), 6)).toFixed(3);
+              const priorityScore = Math.round(Math.min(100, Math.max(0, (0.4 * T_decay + 0.35 * A_signal + 0.25 * H_weakness) * M_freq * 100)) * 10) / 10;
+
+              let rationaleBadge = 'Stable Baseline';
+              if (A_signal >= 0.75) rationaleBadge = 'High AI Reliance';
+              else if (elapsedDays >= 5.0 || T_decay >= 0.4) rationaleBadge = 'Time Decay Alert';
+              else if (H_weakness >= 0.70) rationaleBadge = 'Weak Retention Signal';
+              else if (M_freq >= 1.15) rationaleBadge = 'High Frequency Focus';
+              else if (priorityScore >= 50.0) rationaleBadge = 'High Priority Decay';
+
+              return {
+                topicId: t.topicId,
+                canonicalName: t.canonicalName,
+                category: t.category,
+                priorityScore,
+                T_decay,
+                d_elapsed_days: +elapsedDays.toFixed(1),
+                A_signal,
+                H_weakness,
+                M_freq,
+                rationaleBadge,
+                lastLoggedAt: t.lastLoggedAt,
+                lastRecallAt: t.lastRecallAt || null,
+                journalOccurrences: t.journalOccurrences || 1,
+                effectiveAiAssistanceWeight: A_signal,
+                lastRecallScore: t.lastRecallScore || 2.5,
+                explanationReason: `T(t)=${T_decay} (${elapsedDays.toFixed(1)}d) | A(t)=${A_signal} | H(t)=${H_weakness} | M(t)=${M_freq}`,
+              };
+            });
+
+            queue.sort((a, b) => b.priorityScore - a.priorityScore);
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+              status: 'ok',
+              queue,
+              total: queue.length,
+              generatedAt: new Date().toISOString(),
+            }));
+            return;
+          }
+
+          if (req.url?.startsWith('/api/recall/topics') && req.method === 'GET') {
+            const urlObj = new URL(req.url, 'http://localhost');
+            const search = urlObj.searchParams.get('search')?.toLowerCase();
+            const category = urlObj.searchParams.get('category')?.toLowerCase();
+            const sortBy = urlObj.searchParams.get('sort_by') || 'priority';
+            const page = parseInt(urlObj.searchParams.get('page') || '1', 10);
+            const limit = parseInt(urlObj.searchParams.get('limit') || '20', 10);
+
+            let allTopics = Object.values(userTopics) as any[];
+            const categories = Array.from(new Set(allTopics.map(t => t.category).filter(Boolean))).sort();
+
+            if (search) {
+              allTopics = allTopics.filter(t => 
+                (t.canonicalName && t.canonicalName.toLowerCase().includes(search)) ||
+                (t.category && t.category.toLowerCase().includes(search))
+              );
+            }
+
+            if (category && category !== 'all') {
+              allTopics = allTopics.filter(t => t.category && t.category.toLowerCase() === category);
+            }
+
+            if (sortBy === 'priority') {
+              allTopics.sort((a, b) => (b.currentPriorityScore || 0) - (a.currentPriorityScore || 0));
+            } else if (sortBy === 'recency') {
+              allTopics.sort((a, b) => new Date(b.lastLoggedAt).getTime() - new Date(a.lastLoggedAt).getTime());
+            } else if (sortBy === 'ai_signal') {
+              allTopics.sort((a, b) => (b.effectiveAiAssistanceWeight || 0) - (a.effectiveAiAssistanceWeight || 0));
+            } else if (sortBy === 'alphabetical') {
+              allTopics.sort((a, b) => a.canonicalName.localeCompare(b.canonicalName));
+            }
+
+            const total = allTopics.length;
+            const start = (page - 1) * limit;
+            const paginated = allTopics.slice(start, start + limit);
+
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+              status: 'ok',
+              topics: paginated,
+              total,
+              page,
+              limit,
+              categories,
+            }));
+            return;
+          }
+
+          if (req.url === '/api/recall/sessions/init' && req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => { body += chunk; });
+            req.on('end', () => {
+              res.setHeader('Content-Type', 'application/json');
+              try {
+                const payload = JSON.parse(body);
+                const topicId = payload.topicId;
+                const topic = userTopics[topicId];
+                if (!topic) {
+                  res.statusCode = 404;
+                  res.end(JSON.stringify({ detail: `Target topic '${topicId}' not found in user knowledge base.` }));
+                  return;
+                }
+
+                const lastEvent = topic.lastRecallAt || topic.lastLoggedAt;
+                const elapsedDays = Math.max(0.1, (Date.now() - new Date(lastEvent).getTime()) / (1000 * 86400));
+                const T_decay = +(1.0 - Math.exp(-0.1 * elapsedDays)).toFixed(3);
+                const A_signal = +(topic.effectiveAiAssistanceWeight || 0.5).toFixed(3);
+                const H_weakness = +(topic.recallHistory?.length > 0 ? (5.0 - topic.lastRecallScore) / 4.0 : 0.50).toFixed(3);
+                const M_freq = +(1.0 + 0.05 * Math.min(Math.max(0, (topic.journalOccurrences || 1) - 1), 6)).toFixed(3);
+                const priorityScore = Math.round(Math.min(100, Math.max(0, (0.4 * T_decay + 0.35 * A_signal + 0.25 * H_weakness) * M_freq * 100)) * 10) / 10;
+
+                const breakdown = {
+                  priorityScore,
+                  T_decay,
+                  d_elapsed_days: +elapsedDays.toFixed(1),
+                  A_signal,
+                  H_weakness,
+                  M_freq,
+                  rationaleBadge: A_signal >= 0.75 ? 'High AI Reliance' : (elapsedDays >= 5 ? 'Time Decay Alert' : 'Standard Decay Curve'),
+                  explanationReason: `T(t)=${T_decay} | A(t)=${A_signal} | H(t)=${H_weakness} | M(t)=${M_freq}`,
+                };
+
+                const sessionId = 'session_' + Math.random().toString(36).substring(2, 11);
+                const session = {
+                  sessionId,
+                  userId: authUser.uid,
+                  topicId: topic.topicId,
+                  topicName: topic.canonicalName,
+                  status: 'in_progress',
+                  targetDepth: payload.targetDepth || 'intermediate',
+                  customFocusArea: payload.customFocusArea || null,
+                  initialBreakdown: breakdown,
+                  turns: [],
+                  startedAt: new Date().toISOString(),
+                };
+
+                if (!(global as any).__care_sessions_by_user) (global as any).__care_sessions_by_user = {};
+                if (!(global as any).__care_sessions_by_user[authUser.uid]) (global as any).__care_sessions_by_user[authUser.uid] = {};
+                (global as any).__care_sessions_by_user[authUser.uid][sessionId] = session;
+
+                res.end(JSON.stringify({
+                  status: 'ok',
+                  session,
+                  topic,
+                  breakdown,
+                }));
+              } catch (err) {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ detail: 'Invalid session init payload' }));
+              }
+            });
             return;
           }
         }
