@@ -145,7 +145,7 @@ async def query_recall_topics(
 ):
     """
     Searchable, paginated index of all logged user topics with category filters
-    for manual topic selection into Socratic recall interviews.
+    for manual topic selection into active recall sessions.
     """
     user_id = user_claims.get("uid")
     if not user_id or not isinstance(user_id, str) or user_id.lower().strip() in BANNED_MOCK_UIDS:

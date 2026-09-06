@@ -1,8 +1,8 @@
 /**
- * CARE - SocraticChatModal Component (Slice 4)
- * Multi-Turn Socratic Interviewer Agent Workspace powered by gemini-3.8-flash:
- *  - Real-time turn-based conversational interface
- *  - Dynamic typing indicator during agent conceptual evaluation
+ * CARE - RecallSessionModal Component (Slice 4)
+ * Multi-Turn Peer Knowledge Partner Agent Workspace powered by gemini-3.8-flash:
+ *  - Real-time turn-based active recall conversational interface
+ *  - Dynamic typing indicator during partner conceptual evaluation
  *  - Concept focus tags and target depth telemetry
  *  - End session trigger and automated scorecard generation
  */
@@ -29,14 +29,14 @@ import { RecallSession, ChatTurn, TopicRetentionState } from '../../types';
 import { api } from '../../lib/api';
 import { ScorecardDisplay } from './ScorecardDisplay';
 
-interface SocraticChatModalProps {
+interface RecallSessionModalProps {
   session: RecallSession;
   topic?: TopicRetentionState | null;
   onClose: () => void;
   onSessionCompleted?: (session: RecallSession, updatedTopic?: TopicRetentionState | null) => void;
 }
 
-export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
+export const RecallSessionModal: React.FC<RecallSessionModalProps> = ({
   session: initialSession,
   topic,
   onClose,
@@ -63,7 +63,7 @@ export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
     scrollToBottom();
   }, [session.turns, isSending]);
 
-  // If session has no turns initially, trigger the opening Socratic question automatically
+  // If session has no turns initially, trigger opening active recall prompt automatically
   useEffect(() => {
     let isMounted = true;
 
@@ -77,7 +77,7 @@ export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
           }
         } catch (err: any) {
           if (isMounted) {
-            setErrorMessage(err.message || 'Failed to initialize first Socratic prompt.');
+            setErrorMessage(err.message || 'Failed to initialize first active recall prompt.');
           }
         } finally {
           if (isMounted) {
@@ -135,7 +135,7 @@ export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
       const res = await api.sendRecallMessage(session.sessionId, cleanText);
       setSession(res.session);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to send message to interviewer.');
+      setErrorMessage(err.message || 'Failed to send message to Peer Knowledge Partner.');
     } finally {
       setIsSending(false);
       setTimeout(() => textareaRef.current?.focus(), 100);
@@ -161,7 +161,7 @@ export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
         setCompletedTopic(res.updatedTopic);
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to evaluate interview session.');
+      setErrorMessage(err.message || 'Failed to evaluate active recall session.');
     } finally {
       setIsEvaluating(false);
     }
@@ -187,11 +187,11 @@ export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
 
   return (
     <div
-      id="socratic-chat-backdrop"
+      id="recall-session-backdrop"
       className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
     >
       <div
-        id="socratic-chat-modal"
+        id="recall-session-modal"
         className="bg-stone-900 border border-stone-800 w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[92vh] max-h-[900px] animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
@@ -218,7 +218,7 @@ export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
               <div className="flex items-center gap-3 text-xs text-stone-400 mt-0.5 flex-wrap">
                 <span className="flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-emerald-400" />
-                  <span>Socratic Peer Interviewer • gemini-3.8-flash</span>
+                  <span>Peer Knowledge Partner • gemini-3.8-flash</span>
                 </span>
                 {session.customFocusArea && (
                   <span className="text-stone-500 truncate max-w-xs">
@@ -241,7 +241,7 @@ export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
                     ? 'bg-emerald-500 hover:bg-emerald-400 text-stone-950 border-emerald-400'
                     : 'bg-stone-800 hover:bg-stone-750 text-stone-300 border-stone-700 disabled:opacity-50'
                 }`}
-                title={userTurnCount === 0 ? 'Respond to at least 1 turn before completing evaluation.' : 'Conclude interview and compute recall scorecard'}
+                title={userTurnCount === 0 ? 'Respond to at least 1 turn before completing evaluation.' : 'Conclude session and compute recall scorecard'}
               >
                 {isEvaluating ? (
                   <>
@@ -259,7 +259,7 @@ export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
             )}
 
             <button
-              id="btn-close-socratic-chat"
+              id="btn-close-recall-session"
               type="button"
               onClick={() => {
                 if (session.status === 'completed') {
@@ -294,7 +294,7 @@ export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span>
-                    Socratic Mode: The interviewer will probe your conceptual models without giving direct answers.
+                    Active Recall Mode: Your Peer Knowledge Partner will probe your conceptual models without giving direct answers.
                   </span>
                 </div>
                 <span className="text-[11px] font-mono text-stone-500 shrink-0">
@@ -325,7 +325,7 @@ export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
                     >
                       <div className="flex items-center justify-between gap-4 mb-1">
                         <span className={`text-[10px] font-mono uppercase tracking-wider font-semibold ${isUser ? 'text-emerald-950/80' : 'text-emerald-400'}`}>
-                          {isUser ? 'You' : 'Socratic Colleague'}
+                          {isUser ? 'You' : 'Peer Knowledge Partner'}
                         </span>
                         <span className={`text-[10px] font-mono ${isUser ? 'text-emerald-950/60' : 'text-stone-500'}`}>
                           {new Date(turn.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -357,7 +357,7 @@ export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
                       <span className="w-2 h-2 rounded-full bg-emerald-400/60 animate-pulse" />
                     </div>
                     <span className="font-mono text-[11px] text-stone-400">
-                      Colleague is evaluating your conceptual formulation...
+                      Peer Knowledge Partner is evaluating your conceptual formulation...
                     </span>
                   </div>
                 </div>
@@ -399,7 +399,7 @@ export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
               <form onSubmit={handleSendMessage} className="space-y-2">
                 <div className="relative">
                   <textarea
-                    id="textarea-socratic-response"
+                    id="textarea-recall-response"
                     ref={textareaRef}
                     rows={3}
                     value={inputText}
@@ -411,7 +411,7 @@ export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
                   />
 
                   <button
-                    id="btn-send-socratic-turn"
+                    id="btn-send-recall-turn"
                     type="submit"
                     disabled={!inputText.trim() || isSending || isEvaluating}
                     className="absolute right-2.5 bottom-3 p-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:bg-stone-800 text-stone-950 disabled:text-stone-600 rounded-xl transition-all shadow-sm"
@@ -441,7 +441,7 @@ export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
                 <AlertCircle className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-semibold text-stone-100 text-sm">Leave Recall Interview?</h4>
+                <h4 className="font-semibold text-stone-100 text-sm">Leave Active Recall Session?</h4>
                 <p className="text-xs text-stone-400 mt-1">
                   Your current turns are saved to Firestore, but your decay priority score won't update until evaluated.
                 </p>
@@ -452,7 +452,7 @@ export const SocraticChatModal: React.FC<SocraticChatModalProps> = ({
                   onClick={() => setShowExitConfirm(false)}
                   className="px-4 py-2 bg-stone-800 hover:bg-stone-750 text-stone-300 text-xs font-medium rounded-lg"
                 >
-                  Keep Interviewing
+                  Keep Practicing
                 </button>
                 <button
                   type="button"

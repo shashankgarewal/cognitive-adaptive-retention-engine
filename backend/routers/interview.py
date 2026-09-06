@@ -1,8 +1,8 @@
 """
-CARE - Socratic Interview & Evaluation Router (Slice 4)
+CARE - Active Recall Interview & Evaluation Router (Slice 4)
 Endpoints:
   - POST /api/recall/sessions/{sessionId}/message:
-      Appends user message, queries gemini-3.8-flash Socratic peer agent,
+      Appends user message, queries gemini-3.8-flash Peer Knowledge Partner agent,
       appends agent follow-up question, persists session to Firestore.
   - POST /api/recall/sessions/{sessionId}/evaluate:
       Invokes gemini-3.8-flash with response_schema=RecallEvaluation to generate
@@ -39,7 +39,7 @@ logger = logging.getLogger("care.interview_router")
 
 router = APIRouter(
     dependencies=[Depends(verify_firebase_token)],
-    tags=["Socratic Interview & Recall"],
+    tags=["Active Recall & Peer Knowledge Partner"],
 )
 
 
@@ -104,8 +104,8 @@ async def send_interview_message(
     user_claims: dict = Depends(verify_firebase_token),
 ):
     """
-    Submits user response in a multi-turn Socratic interview session.
-    Invokes gemini-3.8-flash to generate the next Socratic peer follow-up question.
+    Submits user response in a multi-turn active recall session.
+    Invokes gemini-3.8-flash to generate the next Peer Knowledge Partner follow-up question.
     Persists turns to Firestore (/users/{userId}/recall_sessions/{sessionId}).
     """
     user_id = user_claims.get("uid")
@@ -160,7 +160,7 @@ async def send_interview_message(
         )
         session.turns.append(user_turn)
 
-    # 4. Generate next assistant Socratic turn
+    # 4. Generate next assistant Peer Knowledge Partner turn
     assistant_turn = await adk_interviewer.generate_next_turn(
         topic=topic,
         session=session,
@@ -196,7 +196,7 @@ async def evaluate_interview_session(
     user_claims: dict = Depends(verify_firebase_token),
 ):
     """
-    Evaluates completed Socratic interview turns with gemini-3.8-flash using response_schema=RecallEvaluation.
+    Evaluates completed active recall session turns with gemini-3.8-flash using response_schema=RecallEvaluation.
     Calculates conceptual depth score (0-100), identified gaps, and retention recommendations.
     Updates the topic's recall weakness H(t), lastRecallScore, and decay priority in Firestore
     enforcing model.model_dump(exclude_none=True).

@@ -31,7 +31,7 @@ import { JournalFeed } from '../journal/JournalFeed';
 import { TopicRetentionList } from './TopicRetentionList';
 import { TopicSelectionModal } from '../recall/TopicSelectionModal';
 import { TopicPreSessionCard } from '../recall/TopicPreSessionCard';
-import { SocraticChatModal } from '../recall/SocraticChatModal';
+import { RecallSessionModal } from '../recall/RecallSessionModal';
 
 interface WorkspaceHomeProps {
   onOpenAuth: () => void;
@@ -45,7 +45,7 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [selectedConcept, setSelectedConcept] = useState<ExtractedConcept | null>(null);
 
-  // Slice 3 & 4: Recall Engine & Socratic Interviewer states
+  // Slice 3 & 4: Recall Engine & Peer Knowledge Partner states
   const [showTopicSelectModal, setShowTopicSelectModal] = useState(false);
   const [selectedTopicForPreSession, setSelectedTopicForPreSession] = useState<TopicRetentionState | null>(null);
   const [activeRecallSession, setActiveRecallSession] = useState<RecallSession | null>(null);
@@ -384,9 +384,9 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
         />
       )}
 
-      {/* Slice 4: Socratic Interview & Scorecard Modal */}
+      {/* Slice 4: Active Recall Peer Knowledge Partner Modal */}
       {activeRecallSession && (
-        <SocraticChatModal
+        <RecallSessionModal
           session={activeRecallSession}
           topic={activeRecallTopic}
           onClose={() => {
@@ -632,9 +632,9 @@ export const WorkspaceHome: React.FC<WorkspaceHomeProps> = ({ onOpenAuth }) => {
               </span>
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             </div>
-            <h3 className="font-semibold text-stone-100 text-sm">ADK Peer Interviewer</h3>
+            <h3 className="font-semibold text-stone-100 text-sm">Peer Knowledge Partner</h3>
             <p className="text-xs text-stone-400 mt-1">
-              Multi-turn Socratic recall chat with gemini-3.8-flash, structured scorecard, and priority decay consolidation.
+              Multi-turn active recall dialogue with gemini-3.8-flash, structured scorecard, and priority decay consolidation.
             </p>
           </div>
         </div>

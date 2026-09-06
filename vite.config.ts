@@ -412,7 +412,7 @@ function apiDevPlugin(): Plugin {
             return;
           }
 
-          // Slice 4: Recall Socratic Interview message
+          // Slice 4: Active Recall Peer Knowledge Partner message
           if (req.url?.startsWith('/api/recall/sessions/') && req.url.endsWith('/message') && req.method === 'POST') {
             const parts = req.url.split('/');
             const sessionId = parts[4];
@@ -441,7 +441,7 @@ function apiDevPlugin(): Plugin {
                 });
               }
 
-              // Socratic peer response generation
+              // Peer Knowledge Partner response generation
               const turnCount = session.turns.length;
               const topicName = session.topicName || 'this technique';
               const depth = session.targetDepth || 'intermediate';
@@ -449,11 +449,11 @@ function apiDevPlugin(): Plugin {
 
               if (turnCount === 0 || (turnCount === 1 && userMsg)) {
                 if (depth === 'foundational') {
-                  assistantMsg = `Welcome to this Socratic inquiry on ${topicName}. To start off, how would you intuitively explain the core problem it addresses, and what breaks down if we attempt to solve it using simpler classical baselines?`;
+                  assistantMsg = `Welcome to this active recall session on ${topicName}. As your Peer Knowledge Partner, to start off, how would you intuitively explain the core problem it addresses, and what breaks down if we attempt to solve it using simpler classical baselines?`;
                 } else if (depth === 'advanced') {
                   assistantMsg = `Let's dig into ${topicName}. From a mathematical formulation standpoint, what objective function or loss surfaces dictate its convergence, and how does the architecture prevent gradient instability or degenerate representations?`;
                 } else {
-                  assistantMsg = `Welcome. Let's examine ${topicName}. Walk me through its primary algorithmic mechanism: what inputs does it transform, and what fundamental trade-off does it make between representational capacity and computational efficiency?`;
+                  assistantMsg = `Welcome. As your Peer Knowledge Partner, let's examine ${topicName}. Walk me through its primary algorithmic mechanism: what inputs does it transform, and what fundamental trade-off does it make between representational capacity and computational efficiency?`;
                 }
               } else if (turnCount <= 3) {
                 assistantMsg = `That's a sound initial formulation. Let's probe the mechanics deeper: when you tune hyperparameters or loss coefficients for ${topicName}, which parameter directly controls this sensitivity, and what happens mathematically during gradient updates if that parameter is set an order of magnitude too high?`;
@@ -480,7 +480,7 @@ function apiDevPlugin(): Plugin {
             return;
           }
 
-          // Slice 4: Recall Socratic Interview evaluation
+          // Slice 4: Active Recall evaluation
           if (req.url?.startsWith('/api/recall/sessions/') && req.url.endsWith('/evaluate') && req.method === 'POST') {
             const parts = req.url.split('/');
             const sessionId = parts[4];

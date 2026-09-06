@@ -217,7 +217,7 @@ export const TopicRetentionList: React.FC<TopicRetentionListProps> = ({
                     id={`btn-recall-${topic.topicId}`}
                     onClick={() => onInitiateRecall && onInitiateRecall(topic)}
                     className="px-3.5 py-2 rounded-lg bg-stone-800 hover:bg-emerald-500 hover:text-stone-950 text-stone-200 text-xs font-semibold border border-stone-700 hover:border-emerald-500 transition-all flex items-center gap-1.5 group shadow-xs"
-                    title="Inspect decay math and initiate Socratic interview"
+                    title="Inspect decay math and initiate active recall session"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-emerald-400 group-hover:text-stone-950 transition-colors" />
                     <span>Recall Interview</span>

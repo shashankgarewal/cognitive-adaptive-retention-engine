@@ -101,7 +101,7 @@ export const TopicSelectionModal: React.FC<TopicSelectionModalProps> = ({
                 Select Topic for Recall
               </h3>
               <p className="text-xs text-stone-400">
-                Choose any tracked concept from your knowledge base for an targeted Socratic session
+                Choose any tracked concept from your knowledge base for a targeted active recall session
               </p>
             </div>
           </div>

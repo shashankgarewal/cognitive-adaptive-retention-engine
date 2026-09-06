@@ -2,7 +2,7 @@
  * CARE - TopicPreSessionCard Component
  * Displays mathematical decay breakdown (T_decay, A_signal, H_weakness, M_freq),
  * human-readable rationale badge, target depth bounds, and
- * the "Begin Socratic Interview" initialization trigger for Slice 3.
+ * the "Begin Active Recall Session" initialization trigger for Slice 3.
  */
 
 import React, { useState } from 'react';
@@ -121,7 +121,7 @@ export const TopicPreSessionCard: React.FC<TopicPreSessionCardProps> = ({
                 </span>
               </div>
               <p className="text-xs text-stone-400 mt-1">
-                Calibrated Retention Profile &amp; Socratic Interview Preparation
+                Calibrated Retention Profile &amp; Active Recall Preparation
               </p>
             </div>
           </div>
@@ -197,7 +197,7 @@ export const TopicPreSessionCard: React.FC<TopicPreSessionCardProps> = ({
                   }}
                   className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
                 >
-                  <span>Launch Socratic Interview</span>
+                  <span>Launch Active Recall Session</span>
                   <ArrowRight className="w-3.5 h-3.5 text-stone-950" />
                 </button>
               </div>
@@ -385,7 +385,7 @@ export const TopicPreSessionCard: React.FC<TopicPreSessionCardProps> = ({
             </button>
 
             <button
-              id="btn-begin-socratic-interview"
+              id="btn-begin-recall-session"
               type="button"
               onClick={handleStartSession}
               disabled={isInitializing}
@@ -399,7 +399,7 @@ export const TopicPreSessionCard: React.FC<TopicPreSessionCardProps> = ({
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 text-stone-950" />
-                  <span>Begin Socratic Interview</span>
+                  <span>Begin Active Recall Session</span>
                 </>
               )}
             </button>

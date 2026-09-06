@@ -93,7 +93,7 @@ export const ScorecardDisplay: React.FC<ScorecardDisplayProps> = ({
             </h2>
 
             <p className="text-xs sm:text-sm text-stone-400 max-w-lg">
-              Socratic interview completed across {session.turns.length} conversational turns at{' '}
+              Active recall session completed across {session.turns.length} conversational turns at{' '}
               <span className="text-emerald-400 capitalize font-medium">{session.targetDepth || 'intermediate'}</span>{' '}
               rigor.
             </p>
@@ -242,7 +242,7 @@ export const ScorecardDisplay: React.FC<ScorecardDisplayProps> = ({
             className="px-4 py-2.5 bg-stone-800 hover:bg-stone-750 text-stone-200 text-xs sm:text-sm font-medium rounded-xl transition-colors flex items-center gap-2"
           >
             <RotateCcw className="w-3.5 h-3.5 text-stone-400" />
-            <span>Retake Socratic Interview</span>
+            <span>Retake Active Recall Session</span>
           </button>
         )}
 
