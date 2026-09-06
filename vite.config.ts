@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig, Plugin} from 'vite';
+import firebaseConfig from './firebase-applet-config.json';
 
 function extractUserFromBearer(authHeader: string | undefined): { uid: string; email?: string; name?: string } | null {
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
@@ -50,9 +51,9 @@ function apiDevPlugin(): Plugin {
             status: 'healthy',
             service: 'CARE Engine',
             environment: 'development',
-            databaseId: 'ai-studio-aicuratedrecalls-32bbfc5d-7c54-46b3-883d-c9ead24e489f',
+            databaseId: firebaseConfig.firestoreDatabaseId || '(default)',
             vertexAi: true,
-            gcpProject: 'care-recall',
+            gcpProject: firebaseConfig.projectId || 'care-recall',
             location: 'us-central1',
           }));
           return;

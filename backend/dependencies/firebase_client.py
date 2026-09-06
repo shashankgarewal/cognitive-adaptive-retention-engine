@@ -16,16 +16,26 @@ def get_firebase_app():
     global _firebase_app
     if _firebase_app is None:
         try:
-            # Check for service account json or use default application credentials
-            target_project_id = settings.GCP_PROJECT_ID or "care-recall"
-            cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-            if cred_path and os.path.exists(cred_path):
-                cred = credentials.Certificate(cred_path)
+            target_project_id = settings.GCP_PROJECT_ID
+
+            # Check candidate credential file paths or use default application credentials
+            candidate_paths = [
+                os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
+                os.path.join(os.getcwd(), "care-recall-credentials.json"),
+                os.path.join(os.getcwd(), "firebase-credentials.json"),
+                os.path.join(os.getcwd(), "serviceAccountKey.json"),
+            ]
+            valid_cred_path = next((p for p in candidate_paths if p and os.path.exists(p)), None)
+
+            if valid_cred_path:
+                print(f"[Firebase Admin] Initializing with service account credentials: {valid_cred_path}")
+                cred = credentials.Certificate(valid_cred_path)
                 _firebase_app = firebase_admin.initialize_app(cred, {
                     "projectId": target_project_id
                 })
             else:
                 # Default application credentials (Cloud Run / Google Cloud environment)
+                print(f"[Firebase Admin] Initializing with application default credentials for project: {target_project_id}")
                 _firebase_app = firebase_admin.initialize_app(options={
                     "projectId": target_project_id
                 })
@@ -46,11 +56,15 @@ def get_firestore_client():
     if _firestore_db is None:
         get_firebase_app()
         try:
-            # Connect using specific firestore database ID
-            _firestore_db = firestore.client(
-                app=_firebase_app,
-                database_id=settings.FIRESTORE_DATABASE_ID,
-            )
+            # Connect using specific database ID or default
+            db_id = settings.FIRESTORE_DATABASE_ID
+            if db_id and db_id not in ("(default)", "default", ""):
+                _firestore_db = firestore.client(
+                    app=_firebase_app,
+                    database_id=db_id,
+                )
+            else:
+                _firestore_db = firestore.client(app=_firebase_app)
         except Exception as e:
             print(f"[Firestore Client Fallback]: {e}")
             try:

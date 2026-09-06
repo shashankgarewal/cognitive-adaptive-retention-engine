@@ -207,3 +207,13 @@ export interface TopicsListResponse {
   total: number;
 }
 
+export interface AuthErrorDetails {
+  code: string;
+  rawMessage: string;
+  userFriendlyMessage: string;
+  origin: string;
+  authDomain: string;
+  resolutionHint?: string;
+  timestamp: string;
+}
+
