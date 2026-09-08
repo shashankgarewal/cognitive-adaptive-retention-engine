@@ -5,7 +5,7 @@ on:
     branches: [ main, master ]
 
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || secrets.GCP_PROJECT_ID }}
   REGION: us-central1
   SERVICE_NAME: recall-care-app
   GAR_REPO: care-docker-repo
@@ -21,16 +21,18 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Validate Secrets
+    - name: Validate Configuration & Secrets
       run: |
-        if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
-          echo "Error: GCP_PROJECT_ID secret is not set in GitHub repository secrets."
+        PROJ="${{ vars.GCP_PROJECT_ID || secrets.GCP_PROJECT_ID }}"
+        if [ -z "$PROJ" ]; then
+          echo "Error: GCP_PROJECT_ID is not set in GitHub repository variables or secrets."
           exit 1
         fi
         if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
           echo "Error: GCP_SA_KEY secret is not set in GitHub repository secrets."
           exit 1
         fi
+        echo "Using GCP Project ID: $PROJ"
 
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v2
@@ -62,7 +64,7 @@ jobs:
         tags: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
         build-args: |
           VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+          VITE_GCP_PROJECT_ID=${{ vars.GCP_PROJECT_ID || secrets.GCP_PROJECT_ID }}
           VITE_FIREBASE_AUTH_DOMAIN=${{ vars.VITE_FIREBASE_AUTH_DOMAIN || secrets.VITE_FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_APP_ID=${{ vars.VITE_FIREBASE_APP_ID || secrets.VITE_FIREBASE_APP_ID }}
 
